@@ -60,7 +60,7 @@
   .st{margin-top:16px;font-size:13px;color:#7E7A6C;font-weight:600;letter-spacing:1px}
   .go{display:none;margin:22px auto 0;padding:13px 30px;cursor:pointer;
     background:linear-gradient(180deg,#2A3450,#141C2C);color:#F3DFA3;
-    border:1px solid #6E5C2E;font-family:inherit;font-size:15px;font-weight:700;
+    border:1px solid #6E5C2E;font-family:'FF',serif;font-size:15px;font-weight:700;
     letter-spacing:2px}
   .go:hover{border-color:#D9BA6B;box-shadow:0 0 16px rgba(217,186,107,.35)}
 </style>
@@ -75,7 +75,7 @@
   <div class="zh">家 計 簿</div>
   <div class="bar"><i></i></div>
   <div class="st" id="st">連線中…</div>
-  <button class="go" id="go">進　入</button>
+  <button class="go" id="go">S T A R T</button>
 </div>
 
 <script>
@@ -109,17 +109,22 @@ function enter(){ location.replace(APP); }
 
 go.addEventListener('click', enter);
 
+/* 已安裝成 App（standalone）→ 直接進；在瀏覽器 → 停著等你按 */
+var STANDALONE = window.matchMedia('(display-mode: standalone)').matches
+              || window.navigator.standalone === true;
+
 if (APP.indexOf('你的部署ID') >= 0) {
   st.textContent = '⚠️ index.html 裡的 APP 網址還沒填';
 } else if (!navigator.onLine) {
   st.textContent = '目前離線，連上網路再試';
   go.style.display = 'block';
+} else if (STANDALONE) {
+  st.textContent = '進入中…';
+  setTimeout(enter, 700);
 } else {
-  setTimeout(enter, 900);            // 讓開場畫面喘一口氣
-  setTimeout(function(){             // 太久沒跳 → 給一顆手動的
-    st.textContent = '如果沒有自動進入';
-    go.style.display = 'block';
-  }, 4000);
+  st.textContent = '按下開始，或把這頁加到主畫面';
+  go.style.display = 'block';
+  document.querySelector('.bar').style.display = 'none';
 }
 </script>
 </body>
