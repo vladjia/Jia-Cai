@@ -1,5 +1,5 @@
 /* FAMILIA PWA — Network First，離線時回退快取 */
-const CACHE = 'familia-v1';          // ← 大改版時把版號 +1
+const CACHE = 'familia-v2';          // ← 大改版時把版號 +1
 
 const SHELL = [
   './',
