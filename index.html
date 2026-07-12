@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FAMILIA · 家計簿</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#080B12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="家計簿">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+
+<style>
+  @font-face{font-family:'FF';src:url('FF-caps.woff2') format('woff2');
+    unicode-range:U+0041-005A;font-display:swap}
+  @font-face{font-family:'FF';src:url('FF-body.woff2') format('woff2');
+    unicode-range:U+0020-0023,U+0025-0040,U+005B-007E;font-display:swap}
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#080B12;color:#E6E2D6;min-height:100vh;min-height:100dvh;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+    font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;position:relative}
+  body::before{content:'';position:fixed;inset:0;
+    background:radial-gradient(ellipse 70% 45% at 50% 30%,rgba(121,214,236,.11),transparent 70%),
+               radial-gradient(ellipse 90% 50% at 50% 100%,rgba(217,186,107,.07),transparent 70%)}
+
+  #motes{position:fixed;inset:0;overflow:hidden;pointer-events:none}
+  .m{position:absolute;bottom:-30px;border-radius:50%;opacity:0;
+    animation:drift linear infinite}
+  @keyframes drift{
+    0%{transform:translate(0,0) scale(.5);opacity:0}
+    10%{opacity:.85} 50%{transform:translate(18px,-46vh) scale(1)}
+    90%{opacity:.5} 100%{transform:translate(-14px,-102vh) scale(.6);opacity:0}}
+
+  .box{position:relative;text-align:center;padding:0 30px}
+  .crest{width:96px;height:96px;margin:0 auto 26px;position:relative;
+    animation:breathe 3.2s ease-in-out infinite}
+  .crest img{width:100%;height:100%;border-radius:14px;
+    box-shadow:0 0 34px rgba(217,186,107,.35)}
+  @keyframes breathe{0%,100%{transform:scale(1);filter:brightness(1)}
+                     50%{transform:scale(1.04);filter:brightness(1.15)}}
+
+  .en{font-family:'FF',serif;font-size:16px;letter-spacing:7px;color:#B99A50}
+  .cn{font-family:'FF',serif;font-size:52px;color:#F3DFA3;letter-spacing:4px;
+    margin-top:8px;line-height:1.05;-webkit-font-smoothing:antialiased;
+    text-shadow:0 0 26px rgba(217,186,107,.5)}
+  .zh{font-size:19px;letter-spacing:5px;color:#E6E2D6;margin-top:8px;font-weight:500}
+
+  .bar{width:190px;height:2px;margin:34px auto 0;background:#1C2334;
+    overflow:hidden;position:relative}
+  .bar i{position:absolute;inset:0;width:38%;
+    background:linear-gradient(90deg,transparent,#F3DFA3,transparent);
+    animation:sweep 1.5s ease-in-out infinite}
+  @keyframes sweep{0%{transform:translateX(-120%)}100%{transform:translateX(370%)}}
+
+  .st{margin-top:16px;font-size:13px;color:#7E7A6C;font-weight:600;letter-spacing:1px}
+  .go{display:none;margin:22px auto 0;padding:13px 30px;cursor:pointer;
+    background:linear-gradient(180deg,#2A3450,#141C2C);color:#F3DFA3;
+    border:1px solid #6E5C2E;font-family:inherit;font-size:15px;font-weight:700;
+    letter-spacing:2px}
+  .go:hover{border-color:#D9BA6B;box-shadow:0 0 16px rgba(217,186,107,.35)}
+</style>
+</head>
+<body>
+<div id="motes"></div>
+
+<div class="box">
+  <div class="crest"><img src="icon-512.png" alt=""></div>
+  <div class="en">HOUSEHOLD LEDGER</div>
+  <div class="cn">FAMILIA</div>
+  <div class="zh">家 計 簿</div>
+  <div class="bar"><i></i></div>
+  <div class="st" id="st">連線中…</div>
+  <button class="go" id="go">進　入</button>
+</div>
+
+<script>
+/* ══ 把這條換成你的 GAS 網頁應用程式網址 ══ */
+var APP = 'https://script.google.com/macros/s/你的部署ID/exec';
+
+/* 光點 */
+(function(){
+  var c = ['rgba(121,214,236,.9)','rgba(217,186,107,.9)','rgba(200,230,255,.7)'], h = '';
+  for (var i = 0; i < 20; i++) {
+    var s = 1.5 + Math.random() * 3.5;
+    h += '<span class="m" style="left:' + (Math.random()*100).toFixed(1) + '%;' +
+      'width:' + s.toFixed(1) + 'px;height:' + s.toFixed(1) + 'px;background:' + c[i%3] +
+      ';box-shadow:0 0 ' + (5+s*2).toFixed(0) + 'px ' + c[i%3] +
+      ';animation-duration:' + (16+Math.random()*20).toFixed(1) + 's;' +
+      'animation-delay:-' + (Math.random()*30).toFixed(1) + 's;"></span>';
+  }
+  document.getElementById('motes').innerHTML = h;
+})();
+
+/* Service Worker */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+
+/* 轉場 */
+var go = document.getElementById('go');
+var st = document.getElementById('st');
+
+function enter(){ location.replace(APP); }
+
+go.addEventListener('click', enter);
+
+if (APP.indexOf('你的部署ID') >= 0) {
+  st.textContent = '⚠️ index.html 裡的 APP 網址還沒填';
+} else if (!navigator.onLine) {
+  st.textContent = '目前離線，連上網路再試';
+  go.style.display = 'block';
+} else {
+  setTimeout(enter, 900);            // 讓開場畫面喘一口氣
+  setTimeout(function(){             // 太久沒跳 → 給一顆手動的
+    st.textContent = '如果沒有自動進入';
+    go.style.display = 'block';
+  }, 4000);
+}
+</script>
+</body>
+</html>
