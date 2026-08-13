@@ -167,8 +167,9 @@ function load(){
 }
 
 frame.addEventListener('load', function(){
+  /* about:blank 也會觸發 load，要擋掉，不然 PIN 畫面會被掀走 */
+  if (!frame.src || frame.src === 'about:blank') return;
   clearTimeout(watchdog);
-  /* GAS 是雙層 iframe，外層 load 時內層還在跑，緩 400ms 再掀 */
   setTimeout(function(){ veil.classList.add('hide'); }, 400);
 });
 go.addEventListener('click', load);
