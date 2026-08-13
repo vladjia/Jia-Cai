@@ -1,5 +1,7 @@
 /* FAMILIA PWA — Network First，離線時回退快取 */
-const CACHE = 'familia-v2';          // ← 大改版時把版號 +1
+/* 版號 = 改檔日期。動任何 SHELL 內的檔案就把這行改掉，
+   sw.js 位元組一變，瀏覽器自然重跑 install。 */
+const CACHE = 'familia-20260814a';
 
 const SHELL = [
   './',
@@ -21,7 +23,12 @@ const SHELL = [
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(SHELL).catch(() => {}))
+    caches.open(CACHE).then(c =>
+      /* 逐支加，單支失敗不拖累全體；順便把死檔印出來 */
+      Promise.all(SHELL.map(u =>
+        c.add(u).catch(err => console.warn('[SW] 快取失敗:', u, err.message))
+      ))
+    )
   );
 });
 
@@ -40,8 +47,12 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   if (new URL(req.url).origin !== self.location.origin) return;
 
+  /* HTML 導航一律繞開瀏覽器 HTTP 快取（坑C） */
+  const isNav = req.mode === 'navigate' || /\.html?($|\?)/.test(req.url);
+  const hit   = isNav ? fetch(req, { cache: 'no-store' }) : fetch(req);
+
   e.respondWith(
-    fetch(req)
+    hit
       .then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
