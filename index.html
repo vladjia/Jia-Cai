@@ -176,6 +176,25 @@ frame.addEventListener('load', function(){
 });
 go.addEventListener('click', load);
 
+/* 內層喊換頁 / 登出 */
+window.addEventListener('message', function(ev){
+  var o = ev.origin || '';
+  if (!/\.googleusercontent\.com$/.test(o) && o !== 'https://script.google.com') return;
+  var d = ev.data;
+  if (!d) return;
+
+  if (d.t === 'famnav') {
+    var p = String(d.page || '');
+    history.replaceState(null, '', p ? ('?page=' + encodeURIComponent(p)) : location.pathname);
+    load();
+  }
+  if (d.t === 'famlogout') {
+    localStorage.removeItem('FAM_TK');
+    frame.src = 'about:blank';
+    location.reload();
+  }
+});
+
 /* ── PIN 登入 ──────────────────────────── */
 var pinBox = document.getElementById('pin');
 var pinIn  = document.getElementById('pinIn');
