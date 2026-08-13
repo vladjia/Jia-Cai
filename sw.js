@@ -36,7 +36,16 @@ self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys().then(ks =>
       Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))
-    ).then(() => self.clients.claim())
+    )
+    /* 每次啟動都拿真新的 SHELL 覆蓋備胎，版號就不必再動 */
+    .then(() => caches.open(CACHE).then(c =>
+      Promise.all(SHELL.map(u =>
+        fetch(u, { cache: 'no-store' })
+          .then(r => r.ok ? c.put(u, r) : null)
+          .catch(() => {})
+      ))
+    ))
+    .then(() => self.clients.claim())
   );
 });
 
