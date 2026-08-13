@@ -10,14 +10,14 @@
 <meta property="og:site_name"   content="VLADJIA">
 <meta property="og:title"       content="JIA &amp; CAI FAMILIA · 家計簿">
 <meta property="og:description" content="每月對帳與家用記錄，即時更新。">
-<meta property="og:image"       content="https://vladjia.github.io/你的路徑/og-familia.png">
+<meta property="og:image"       content="https://vladjia.github.io/Jia-Cai/og-familia.png">
 <meta property="og:image:width"  content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:url"         content="https://vladjia.github.io/你的路徑/">
+<meta property="og:url"         content="https://vladjia.github.io/Jia-Cai/">
 <meta property="og:locale"      content="zh_TW">
 <meta name="twitter:card"  content="summary_large_image">
 <meta name="twitter:title" content="JIA &amp; CAI FAMILIA · 家計簿">
-<meta name="twitter:image" content="https://vladjia.github.io/你的路徑/og-familia.png">
+<meta name="twitter:image" content="https://vladjia.github.io/Jia-Cai/og-familia.png">
 
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#080B12">
@@ -161,8 +161,10 @@ function load(){
     go.style.display  = 'block';
   }, 12000);
 
-  /* 外層參數原封不動帶進 iframe */
-  var qs  = location.search.replace(/^\?/, '');
+  /* 外層參數原封不動帶進 iframe，再加上身分 token */
+  var qs = location.search.replace(/^\?/, '');
+  var tk = localStorage.getItem('FAM_TK') || '';
+  if (tk) qs += (qs ? '&' : '') + 'tk=' + encodeURIComponent(tk);
   frame.src = APP + (qs ? (APP.indexOf('?') >= 0 ? '&' : '?') + qs : '');
 }
 
