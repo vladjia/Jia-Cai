@@ -85,6 +85,13 @@
     border:1px solid #6E5C2E;font-family:'FF',serif;font-size:22px;font-weight:400;
     letter-spacing:8px;text-indent:8px;-webkit-font-smoothing:antialiased}
   .go:hover{border-color:#D9BA6B;box-shadow:0 0 16px rgba(217,186,107,.35)}
+
+  #pin{display:none;margin-top:26px}
+  #pin input{width:180px;padding:13px;text-align:center;letter-spacing:10px;
+    font-size:22px;background:#0E1420;border:1px solid #2A3450;color:#F3DFA3;
+    border-radius:6px;outline:none}
+  #pin input:focus{border-color:#D9BA6B}
+  #pinMsg{margin-top:12px;font-size:12px;color:#C24A6D;min-height:16px}
 </style>
 </head>
 <body>
@@ -103,6 +110,10 @@
   <div class="bar"><i></i></div>
   <div class="st" id="st">連線中…</div>
   <button class="go" id="go">RETRY</button>
+  <div id="pin">
+    <input id="pinIn" type="tel" maxlength="4" inputmode="numeric" placeholder="○○○○">
+    <div id="pinMsg"></div>
+  </div>
 </div>
 </div>
 
@@ -162,6 +173,35 @@ frame.addEventListener('load', function(){
 });
 go.addEventListener('click', load);
 
+/* ── PIN 登入 ──────────────────────────── */
+var pinBox = document.getElementById('pin');
+var pinIn  = document.getElementById('pinIn');
+var pinMsg = document.getElementById('pinMsg');
+
+function askPin(){
+  bar.style.display = 'none';
+  go.style.display  = 'none';
+  st.textContent    = '請輸入 PIN';
+  pinBox.style.display = 'block';
+  setTimeout(function(){ pinIn.focus(); }, 300);
+}
+
+pinIn.addEventListener('input', function(){
+  pinMsg.textContent = '';
+  if (pinIn.value.length !== 4) return;
+
+  pinMsg.textContent = '驗證中…';
+  fetch(APP + '?fn=login&pin=' + encodeURIComponent(pinIn.value))
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j.ok) { pinMsg.textContent = 'PIN 不對'; pinIn.value = ''; return; }
+      localStorage.setItem('FAM_TK', j.tk);
+      pinBox.style.display = 'none';
+      load();
+    })
+    .catch(function(){ pinMsg.textContent = '連線失敗，再試一次'; pinIn.value = ''; });
+});
+
 if (APP.indexOf('你的部署ID') >= 0) {
   st.textContent = '⚠️ index.html 裡的 APP 網址還沒填';
   bar.style.display = 'none';
@@ -169,6 +209,8 @@ if (APP.indexOf('你的部署ID') >= 0) {
   st.textContent = '目前離線，連上網路再試';
   bar.style.display = 'none';
   go.style.display  = 'block';
+} else if (!localStorage.getItem('FAM_TK')) {
+  askPin();
 } else {
   load();
 }
