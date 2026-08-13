@@ -4,6 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>JIA & CAI FAMILIA · 家計簿</title>
+<meta name="description" content="每月對帳與家用記錄，即時更新。">
+
+<meta property="og:type"        content="website">
+<meta property="og:site_name"   content="VLADJIA">
+<meta property="og:title"       content="JIA &amp; CAI FAMILIA · 家計簿">
+<meta property="og:description" content="每月對帳與家用記錄，即時更新。">
+<meta property="og:image"       content="https://vladjia.github.io/你的路徑/og-familia.png">
+<meta property="og:image:width"  content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url"         content="https://vladjia.github.io/你的路徑/">
+<meta property="og:locale"      content="zh_TW">
+<meta name="twitter:card"  content="summary_large_image">
+<meta name="twitter:title" content="JIA &amp; CAI FAMILIA · 家計簿">
+<meta name="twitter:image" content="https://vladjia.github.io/你的路徑/og-familia.png">
 
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#080B12">
@@ -21,14 +35,22 @@
     unicode-range:U+0020-0023,U+0025-0040,U+005B-007E;font-display:swap}
 
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#080B12;color:#E6E2D6;min-height:100vh;min-height:100dvh;
-    display:flex;align-items:center;justify-content:center;overflow:hidden;
-    font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;position:relative}
-  body::before{content:'';position:fixed;inset:0;
+  html,body{height:100%;overflow:hidden}
+  body{background:#080B12;color:#E6E2D6;
+    font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif}
+
+  #frame{position:fixed;inset:0;width:100%;height:100%;border:0;
+    display:block;background:#080B12}
+
+  #veil{position:fixed;inset:0;z-index:10;
+    display:flex;align-items:center;justify-content:center;
+    background:#080B12;transition:opacity .45s ease}
+  #veil.hide{opacity:0;pointer-events:none}
+  #veil::before{content:'';position:absolute;inset:0;
     background:radial-gradient(ellipse 70% 45% at 50% 30%,rgba(121,214,236,.11),transparent 70%),
                radial-gradient(ellipse 90% 50% at 50% 100%,rgba(217,186,107,.07),transparent 70%)}
 
-  #motes{position:fixed;inset:0;overflow:hidden;pointer-events:none}
+  #motes{position:absolute;inset:0;overflow:hidden;pointer-events:none}
   .m{position:absolute;bottom:-30px;border-radius:50%;opacity:0;
     animation:drift linear infinite}
   @keyframes drift{
@@ -66,6 +88,11 @@
 </style>
 </head>
 <body>
+<iframe id="frame" title="家計簿"
+        referrerpolicy="no-referrer-when-downgrade"
+        allow="clipboard-write"></iframe>
+
+<div id="veil">
 <div id="motes"></div>
 
 <div class="box">
@@ -75,7 +102,8 @@
   <div class="zh">家 計 簿</div>
   <div class="bar"><i></i></div>
   <div class="st" id="st">連線中…</div>
-  <button class="go" id="go">START</button>
+  <button class="go" id="go">RETRY</button>
+</div>
 </div>
 
 <script>
@@ -96,35 +124,53 @@ var APP = 'https://script.google.com/macros/s/AKfycby4EFTw-rAUK0T4yZLPm-Y0qEIhdM
   document.getElementById('motes').innerHTML = h;
 })();
 
-/* Service Worker */
+/* Service Worker（坑C：一定要 update） */
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(function(){});
+  navigator.serviceWorker.register('sw.js')
+    .then(function(reg){ reg.update(); })
+    .catch(function(){});
 }
 
-/* 轉場 */
-var go = document.getElementById('go');
-var st = document.getElementById('st');
+var frame = document.getElementById('frame');
+var veil  = document.getElementById('veil');
+var st    = document.getElementById('st');
+var go    = document.getElementById('go');
+var bar   = document.querySelector('.bar');
+var watchdog = null;
 
-function enter(){ location.replace(APP); }
+function load(){
+  veil.classList.remove('hide');
+  bar.style.display = '';
+  go.style.display  = 'none';
+  st.textContent    = '連線中…';
+  clearTimeout(watchdog);
+  watchdog = setTimeout(function(){
+    st.textContent   = '連線逾時，請按 RETRY';
+    bar.style.display = 'none';
+    go.style.display  = 'block';
+  }, 12000);
 
-go.addEventListener('click', enter);
+  /* 外層參數原封不動帶進 iframe */
+  var qs  = location.search.replace(/^\?/, '');
+  frame.src = APP + (qs ? (APP.indexOf('?') >= 0 ? '&' : '?') + qs : '');
+}
 
-/* 已安裝成 App（standalone）→ 直接進；在瀏覽器 → 停著等你按 */
-var STANDALONE = window.matchMedia('(display-mode: standalone)').matches
-              || window.navigator.standalone === true;
+frame.addEventListener('load', function(){
+  clearTimeout(watchdog);
+  /* GAS 是雙層 iframe，外層 load 時內層還在跑，緩 400ms 再掀 */
+  setTimeout(function(){ veil.classList.add('hide'); }, 400);
+});
+go.addEventListener('click', load);
 
 if (APP.indexOf('你的部署ID') >= 0) {
   st.textContent = '⚠️ index.html 裡的 APP 網址還沒填';
+  bar.style.display = 'none';
 } else if (!navigator.onLine) {
   st.textContent = '目前離線，連上網路再試';
-  go.style.display = 'block';
-} else if (STANDALONE) {
-  st.textContent = '進入中…';
-  setTimeout(enter, 700);
+  bar.style.display = 'none';
+  go.style.display  = 'block';
 } else {
-  st.textContent = '按下開始，或把這頁加到主畫面';
-  go.style.display = 'block';
-  document.querySelector('.bar').style.display = 'none';
+  load();
 }
 </script>
 </body>
