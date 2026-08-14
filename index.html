@@ -168,11 +168,25 @@ function load(){
   frame.src = APP + (qs ? (APP.indexOf('?') >= 0 ? '&' : '?') + qs : '');
 }
 
+/* 量出瀏海高度，內層 iframe 讀不到 env()，要外面告訴它 */
+function safeTop(){
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top,0px)';
+  document.body.appendChild(d);
+  var h = d.offsetHeight;
+  d.remove();
+  return h;
+}
+
 frame.addEventListener('load', function(){
   /* about:blank 也會觸發 load，要擋掉，不然 PIN 畫面會被掀走 */
   if (!frame.src || frame.src === 'about:blank') return;
   clearTimeout(watchdog);
   setTimeout(function(){ veil.classList.add('hide'); }, 400);
+  /* 稍等內層 listener 掛好再送 */
+  setTimeout(function(){
+    try { frame.contentWindow.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
+  }, 300);
 });
 go.addEventListener('click', load);
 
