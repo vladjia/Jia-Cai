@@ -188,6 +188,12 @@ window.addEventListener('message', function(ev){
     history.replaceState(null, '', p ? ('?page=' + encodeURIComponent(p)) : location.pathname);
     load();
   }
+  /* 只換網址不重載（月結頁切池子用） */
+  if (d.t === 'famurl') {
+    var q = String(d.page || '');
+    history.replaceState(null, '', q ? ('?page=' + encodeURIComponent(q)) : location.pathname);
+    return;
+  }
   if (d.t === 'famlogout') {
     localStorage.removeItem('FAM_TK');
     frame.src = 'about:blank';
