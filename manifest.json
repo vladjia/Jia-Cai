@@ -1,7 +1,7 @@
 {
-  "name": "JIA & CAI - FAMILIA 家計簿",
-  "short_name": "菜菜簿",
-  "description": "飲食費・生活費・匯款單・日記・RS ZERO",
+  "name": "家菜金",
+  "short_name": "家菜金",
+  "description": "家兒＋菜菜的家計簿：記帳・分帳・匯款單・日記",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -10,8 +10,23 @@
   "theme_color": "#080B12",
   "lang": "zh-Hant",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
