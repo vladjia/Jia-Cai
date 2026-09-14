@@ -101,6 +101,7 @@
   /* 通知邀請卡。浮在 iframe 上面，不佔版面。
      bottom 要加 safe-area，不然 iPhone 會被下面那條橫槓壓到。 */
   #npc{display:none;position:fixed;z-index:20;left:12px;right:12px;
+    max-width:440px;margin-left:auto;
     bottom:calc(12px + env(safe-area-inset-bottom,0px));
     background:#111827;border:1px solid #2A3450;border-radius:14px;
     padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.55)}
@@ -111,6 +112,11 @@
     cursor:pointer;border:1px solid #2A3450;background:#0E1420;color:#9AA3B2}
   #npc button.y{background:linear-gradient(180deg,#2A3450,#141C2C);
     border-color:#6E5C2E;color:#F3DFA3}
+  /* 手機上看不到 console，所以每一步的結果一定要印在畫面上 */
+  #npcMsg{margin-top:9px;font-size:11.5px;line-height:1.55;color:#7E8798;
+    word-break:break-all;white-space:pre-wrap}
+  #npcMsg.bad{color:#E0778E}
+  #npcMsg.good{color:#7FBE8B}
 </style>
 </head>
 <body>
@@ -137,8 +143,9 @@
 </div>
 
 <div id="npc">
-  <b>開啟通知</b>
-  <p>對帳日、匯款單、每月固定該扣款了 —— 讓家菜金主動提醒你，不用自己記得打開。</p>
+  <b id="npcT">開啟通知</b>
+  <p id="npcP">對帳日、匯款單、每月固定該扣款了 —— 讓家菜金主動提醒你，不用自己記得打開。</p>
+  <div id="npcMsg"></div>
   <div class="r">
     <button id="npcNo">稍後再說</button>
     <button id="npcYes" class="y">開啟</button>
@@ -300,40 +307,105 @@ function devName(){
          : /Windows/.test(ua) ? 'Windows' : '其他';
   return os + ' · ' + (navigator.language || '');
 }
+/* 🔴 卡片上一定要有字。
+   手機上沒有 console —— 失敗只 console.warn 等於什麼都沒說，
+   使用者只會看到「按了沒反應」，然後連重試的入口都沒有。 */
+var npcT = document.getElementById('npcT');
+var npcP = document.getElementById('npcP');
+var npcM = document.getElementById('npcMsg');
+var npcY = document.getElementById('npcYes');
+var npcN = document.getElementById('npcNo');
+
+function npcShow(title, desc, msg, cls, yes){
+  npcT.textContent = title;
+  npcP.textContent = desc;
+  npcM.textContent = msg || '';
+  npcM.className = cls || '';
+  npcY.textContent = yes || '開啟';
+  npc.style.display = 'block';
+}
+function npcFail(where, err){
+  var m = (err && err.message) || String(err || '');
+  console.warn('[push] ' + where, err);
+  npcShow('通知還沒設定成功',
+          '卡在「' + where + '」這一步。按重試會整個重來一次。',
+          m.slice(0, 200), 'bad', '重試');
+}
+
+/* 送訂閱給後端。
+   ⚠️ text/plain 是故意的：送 application/json 會觸發 CORS 預檢，
+      而 GAS 不回 OPTIONS，整個請求會被瀏覽器擋掉，
+      console 只會說 CORS error，完全看不出真正原因。
+   🔴 一定要看後端回什麼。以前只看 fetch 有沒有丟例外 ——
+      GAS 找不到 doPost 時會回 200 ＋ 一張錯誤頁，
+      那種情況「沒有例外」，但其實一筆都沒存進去。 */
 function sendSub(sub){
   var tk = localStorage.getItem('FAM_TK') || '';
-  if (!tk || !sub) return;
-  /* ⚠️ text/plain 是故意的：送 application/json 會觸發 CORS 預檢，
-        而 GAS 不回 OPTIONS，整個請求會被瀏覽器擋掉，
-        console 只會說 CORS error，完全看不出真正原因。 */
+  if (!tk)  return Promise.reject(new Error('沒有 token，先登入'));
+  if (!sub) return Promise.reject(new Error('沒有訂閱物件'));
   return fetch(APP, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ act:'pushSub', token: tk, sub: sub.toJSON(), device: devName() })
-  }).then(function(r){ return r.json(); })
-    .then(function(j){ if (!j || !j.ok) console.warn('[push] 存訂閱失敗', j); })
-    .catch(function(err){ console.warn('[push] 存訂閱連不上', err); });
-}
-function doSubscribe(reg){
-  return fetch(APP + '?fn=pushkey')
-    .then(function(r){ return r.json(); })
-    .then(function(j){
-      if (!j || !j.key) throw new Error('後端還沒設 PUSH_PUBLIC_KEY');
-      return reg.pushManager.subscribe({
-        userVisibleOnly: true, applicationServerKey: b64key(j.key) });
-    })
-    .then(sendSub)
-    .catch(function(err){ console.warn('[push] 訂閱失敗', err); });
+  }).then(function(r){
+    return r.text().then(function(t){
+      var j = null;
+      try { j = JSON.parse(t); } catch(_){}
+      if (!j) throw new Error('後端沒回 JSON（HTTP ' + r.status +
+        '）。多半是 GAS 還沒重新部署，doPost 不存在。收到：' + t.slice(0, 120));
+      if (!j.ok) throw new Error('後端說：' + (j.msg || '(沒說原因)'));
+      return true;
+    });
+  });
 }
 
-document.getElementById('npcYes').addEventListener('click', function(){
-  npc.style.display = 'none';
+/** 從頭走一次：拿公鑰 → 訂閱 → 存後端。force=true 會先退掉舊訂閱。 */
+function famPush(force){
+  return navigator.serviceWorker.ready.then(function(reg){
+    return reg.pushManager.getSubscription().then(function(old){
+      if (!old) return null;
+      return force ? old.unsubscribe().then(function(){ return null; }) : old;
+    }).then(function(sub){
+      if (sub) return sub;
+      return fetch(APP + '?fn=pushkey')
+        .then(function(r){ return r.text(); })
+        .then(function(t){
+          var j = null;
+          try { j = JSON.parse(t); } catch(_){}
+          if (!j || !j.key) throw new Error('拿不到公鑰。GAS 沒重新部署，' +
+            '或 PUSH_PUBLIC_KEY 沒設。收到：' + t.slice(0, 120));
+          return reg.pushManager.subscribe({
+            userVisibleOnly: true, applicationServerKey: b64key(j.key) });
+        });
+    }).then(sendSub);
+  }).then(function(){
+    npcShow('通知已開啟', '之後對帳日、匯款單這些我會直接提醒你。',
+            '', 'good', '好');
+    npcY.onclick = function(){ npc.style.display = 'none'; npcY.onclick = null; };
+    try { localStorage.removeItem('FAM_PUSH_LATER'); } catch(e){}
+    return true;
+  }).catch(function(err){
+    npcFail(err && err.message && err.message.indexOf('公鑰') >= 0 ? '跟後端要公鑰' : '存進後端', err);
+    return false;
+  });
+}
+window.famPush = famPush;      // console 裡隨時可以 famPush(true) 重來
+
+npcY.addEventListener('click', function(){
+  if (npcY.onclick) return;                 // 成功狀態的「好」由上面接手
+  npcM.textContent = '處理中…'; npcM.className = '';
+  if (Notification.permission === 'granted') { famPush(true); return; }
   Notification.requestPermission().then(function(p){
-    if (p !== 'granted') return;
-    navigator.serviceWorker.ready.then(doSubscribe);
+    if (p !== 'granted') {
+      npcShow('通知被擋住了',
+        '瀏覽器沒有給權限。要改的話去網址列左邊的鎖頭圖示 → 通知 → 允許，再回來按重試。',
+        '', 'bad', '重試');
+      return;
+    }
+    famPush(true);
   });
 });
-document.getElementById('npcNo').addEventListener('click', function(){
+npcN.addEventListener('click', function(){
   npc.style.display = 'none';
   try { localStorage.setItem('FAM_PUSH_LATER', String(Date.now())); } catch(e){}
 });
@@ -345,7 +417,6 @@ function pushGate(){
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
     if (typeof Notification === 'undefined') return;
     if (!localStorage.getItem('FAM_TK')) return;          // 還沒登入，問了也沒用
-    if (Notification.permission === 'denied') return;     // 拒過了，再問只是騷擾
 
     var iOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -354,18 +425,29 @@ function pushGate(){
     if (iOS && !home) return;                             // Safari 分頁訂不了
 
     pushGateDone = true;
+
+    if (Notification.permission === 'denied') {
+      /* 擋掉了還是要講一聲，不然他會以為程式壞了 */
+      var ld = Number(localStorage.getItem('FAM_PUSH_LATER') || 0);
+      if (!ld || Date.now() - ld > PUSH_LATER_DAYS * 86400000) {
+        npcShow('通知被瀏覽器擋住了',
+          '網址列左邊的鎖頭 → 通知 → 允許，再回來按重試。', '', 'bad', '重試');
+      }
+      return;
+    }
+
     navigator.serviceWorker.ready.then(function(reg){
       return reg.pushManager.getSubscription().then(function(sub){
-        /* 已經訂過 → 靜靜續約一次就好。
-           換手機、重裝、換 token 之後，表上那列可能是舊的。 */
-        if (sub) return sendSub(sub);
-        if (Notification.permission === 'granted') return doSubscribe(reg);
+        /* 已經訂過 → 續約一次。換手機、重裝、換 token 之後表上那列可能是舊的。
+           🔴 失敗要講出來 —— 這正是之前默默壞掉的地方。 */
+        if (sub) return sendSub(sub).catch(function(err){ npcFail('存進後端', err); });
+        if (Notification.permission === 'granted') return famPush(false);
 
         var la = Number(localStorage.getItem('FAM_PUSH_LATER') || 0);
         if (la && Date.now() - la < PUSH_LATER_DAYS * 86400000) return;
         npc.style.display = 'block';
       });
-    }).catch(function(){});
+    }).catch(function(err){ npcFail('準備 Service Worker', err); });
   } catch(e){}
 }
 
