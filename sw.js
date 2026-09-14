@@ -1,7 +1,7 @@
 /* FAMILIA PWA — Network First，離線時回退快取 */
 /* 版號 = 改檔日期。動任何 SHELL 內的檔案就把這行改掉，
    sw.js 位元組一變，瀏覽器自然重跑 install。 */
-const CACHE = 'familia-20260914a';
+const CACHE = 'familia-20260914b';
 
 const SHELL = [
   './',
@@ -48,6 +48,44 @@ self.addEventListener('activate', e => {
       ))
     ))
     .then(() => self.clients.claim())
+  );
+});
+
+/* ══ 推播 ══════════════════════════════════════
+   Worker 送過來的是 {title, body, url, tag} 的 JSON。
+
+   ⚠️ 一定要 showNotification，不能收了不顯示 ——
+      我們訂閱時宣告了 userVisibleOnly:true，
+      靜靜吃掉幾次之後瀏覽器會直接把訂閱撤銷，而且不會告訴你。 */
+self.addEventListener('push', e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; }
+  catch (_) { d = { body: e.data ? e.data.text() : '' }; }
+
+  e.waitUntil(self.registration.showNotification(d.title || '家菜金', {
+    body:  d.body || '',
+    icon:  './icon-192.png',
+    badge: './icon-192.png',
+    tag:   d.tag || 'familia',
+    renotify: true,
+    data:  { url: d.url || './' }
+  }));
+});
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(ws => {
+      /* 已經開著就切過去，不要再開一個分頁 */
+      for (const w of ws) {
+        if (w.url.indexOf(self.registration.scope) === 0) {
+          if (w.navigate) { try { w.navigate(url); } catch (_) {} }
+          return w.focus();
+        }
+      }
+      return clients.openWindow(url);
+    })
   );
 });
 

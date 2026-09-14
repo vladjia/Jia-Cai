@@ -97,6 +97,20 @@
     border-radius:6px;outline:none}
   #pin input:focus{border-color:#D9BA6B}
   #pinMsg{margin-top:12px;font-size:12px;color:#C24A6D;min-height:16px}
+
+  /* 通知邀請卡。浮在 iframe 上面，不佔版面。
+     bottom 要加 safe-area，不然 iPhone 會被下面那條橫槓壓到。 */
+  #npc{display:none;position:fixed;z-index:20;left:12px;right:12px;
+    bottom:calc(12px + env(safe-area-inset-bottom,0px));
+    background:#111827;border:1px solid #2A3450;border-radius:14px;
+    padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.55)}
+  #npc b{display:block;font-size:15px;color:#F3DFA3;letter-spacing:1px}
+  #npc p{margin-top:5px;font-size:12.5px;line-height:1.6;color:#9AA3B2}
+  #npc .r{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+  #npc button{font:600 14px/1 inherit;padding:11px 18px;border-radius:9px;
+    cursor:pointer;border:1px solid #2A3450;background:#0E1420;color:#9AA3B2}
+  #npc button.y{background:linear-gradient(180deg,#2A3450,#141C2C);
+    border-color:#6E5C2E;color:#F3DFA3}
 </style>
 </head>
 <body>
@@ -120,6 +134,15 @@
     <div id="pinMsg"></div>
   </div>
 </div>
+</div>
+
+<div id="npc">
+  <b>開啟通知</b>
+  <p>對帳日、匯款單、每月固定該扣款了 —— 讓家菜金主動提醒你，不用自己記得打開。</p>
+  <div class="r">
+    <button id="npcNo">稍後再說</button>
+    <button id="npcYes" class="y">開啟</button>
+  </div>
 </div>
 
 <script>
@@ -192,6 +215,8 @@ frame.addEventListener('load', function(){
   setTimeout(function(){
     try { frame.contentWindow.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
   }, 300);
+  /* 等畫面穩了再問通知。一進來就跳，感覺像廣告。 */
+  setTimeout(pushGate, 2500);
 });
 go.addEventListener('click', load);
 
@@ -248,6 +273,101 @@ pinIn.addEventListener('input', function(){
     })
     .catch(function(){ pinMsg.textContent = '連線失敗，再試一次'; pinIn.value = ''; });
 });
+
+/* ── 推播訂閱 ──────────────────────────────
+   🔴 訂閱一定要在這一層做，不能在 iframe 裡面。
+      Service Worker 掛在 vladjia.github.io，訂閱只屬於這個網域；
+      iframe 裡是 googleusercontent，拿不到 registration。
+
+   🔴 iOS 的兩個硬條件（繞不過去，不是程式寫得好就能解）：
+      1. 一定要先「加入主畫面」，Safari 分頁裡開根本沒有 PushManager
+      2. 權限一定要由手指點下去觸發，不能自動跳
+      所以才有那張卡片，而不是一進來就問。 */
+var npc    = document.getElementById('npc');
+var PUSH_LATER_DAYS = 30;
+
+function b64key(s){
+  s = String(s).replace(/-/g,'+').replace(/_/g,'/');
+  while (s.length % 4) s += '=';
+  var raw = atob(s), a = new Uint8Array(raw.length);
+  for (var i = 0; i < raw.length; i++) a[i] = raw.charCodeAt(i);
+  return a;
+}
+function devName(){
+  var ua = navigator.userAgent;
+  var os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad'
+         : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac'
+         : /Windows/.test(ua) ? 'Windows' : '其他';
+  return os + ' · ' + (navigator.language || '');
+}
+function sendSub(sub){
+  var tk = localStorage.getItem('FAM_TK') || '';
+  if (!tk || !sub) return;
+  /* ⚠️ text/plain 是故意的：送 application/json 會觸發 CORS 預檢，
+        而 GAS 不回 OPTIONS，整個請求會被瀏覽器擋掉，
+        console 只會說 CORS error，完全看不出真正原因。 */
+  return fetch(APP, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ act:'pushSub', token: tk, sub: sub.toJSON(), device: devName() })
+  }).then(function(r){ return r.json(); })
+    .then(function(j){ if (!j || !j.ok) console.warn('[push] 存訂閱失敗', j); })
+    .catch(function(err){ console.warn('[push] 存訂閱連不上', err); });
+}
+function doSubscribe(reg){
+  return fetch(APP + '?fn=pushkey')
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if (!j || !j.key) throw new Error('後端還沒設 PUSH_PUBLIC_KEY');
+      return reg.pushManager.subscribe({
+        userVisibleOnly: true, applicationServerKey: b64key(j.key) });
+    })
+    .then(sendSub)
+    .catch(function(err){ console.warn('[push] 訂閱失敗', err); });
+}
+
+document.getElementById('npcYes').addEventListener('click', function(){
+  npc.style.display = 'none';
+  Notification.requestPermission().then(function(p){
+    if (p !== 'granted') return;
+    navigator.serviceWorker.ready.then(doSubscribe);
+  });
+});
+document.getElementById('npcNo').addEventListener('click', function(){
+  npc.style.display = 'none';
+  try { localStorage.setItem('FAM_PUSH_LATER', String(Date.now())); } catch(e){}
+});
+
+var pushGateDone = false;
+function pushGate(){
+  if (pushGateDone) return;
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (typeof Notification === 'undefined') return;
+    if (!localStorage.getItem('FAM_TK')) return;          // 還沒登入，問了也沒用
+    if (Notification.permission === 'denied') return;     // 拒過了，再問只是騷擾
+
+    var iOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    var home = (window.navigator.standalone === true) ||
+               (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    if (iOS && !home) return;                             // Safari 分頁訂不了
+
+    pushGateDone = true;
+    navigator.serviceWorker.ready.then(function(reg){
+      return reg.pushManager.getSubscription().then(function(sub){
+        /* 已經訂過 → 靜靜續約一次就好。
+           換手機、重裝、換 token 之後，表上那列可能是舊的。 */
+        if (sub) return sendSub(sub);
+        if (Notification.permission === 'granted') return doSubscribe(reg);
+
+        var la = Number(localStorage.getItem('FAM_PUSH_LATER') || 0);
+        if (la && Date.now() - la < PUSH_LATER_DAYS * 86400000) return;
+        npc.style.display = 'block';
+      });
+    }).catch(function(){});
+  } catch(e){}
+}
 
 if (APP.indexOf('你的部署ID') >= 0) {
   st.textContent = '⚠️ index.html 裡的 APP 網址還沒填';
