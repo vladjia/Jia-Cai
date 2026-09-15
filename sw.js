@@ -1,25 +1,33 @@
 /* FAMILIA PWA — Network First，離線時回退快取 */
 /* 版號 = 改檔日期。動任何 SHELL 內的檔案就把這行改掉，
    sw.js 位元組一變，瀏覽器自然重跑 install。 */
-const CACHE = 'familia-20260915c';
+const CACHE = 'familia-20260915d';
 
 const SHELL = [
   './',
   './index.html',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './apple-touch-icon.png',
-  './icon-maskable-512.png',
-  './icon-maskable-192.png',
+  './assets/icons/app/icon-192.png',
+  './assets/icons/app/icon-512.png',
+  './assets/icons/app/apple-touch-icon.png',
+  './assets/icons/app/icon-maskable-512.png',
+  './assets/icons/app/icon-maskable-192.png',
+  './assets/icons/menu/icon-ledger.png',
+  './assets/icons/menu/icon-accounts.png',
+  './assets/icons/menu/icon-recurring.png',
+  './assets/icons/menu/icon-forecast.png',
+  './assets/icons/menu/icon-reconcile.png',
+  './assets/icons/menu/icon-split.png',
+  './assets/icons/menu/icon-insights.png',
+  './assets/icons/menu/icon-budget.png',
+  './assets/icons/menu/icon-remittance.png',
+  './assets/icons/menu/icon-loan.png',
+  './assets/icons/menu/icon-calendar.png',
+  './assets/icons/menu/icon-diary.png',
+  './assets/icons/menu/icon-notify.png',
   './FF-caps.woff2',
   './FF-body.woff2',
-  './eat.png',
-  './lifemoney.png',
-  './Remittance.png',
-  './month.png',
-  './rs-zero.png',
-  './gil.png'
+  './rs-zero.png'
 ];
 
 self.addEventListener('install', e => {
@@ -64,8 +72,8 @@ self.addEventListener('push', e => {
 
   e.waitUntil(self.registration.showNotification(d.title || '家菜金', {
     body:  d.body || '',
-    icon:  './icon-192.png',
-    badge: './icon-192.png',
+    icon:  './assets/icons/app/icon-192.png',
+    badge: './assets/icons/app/icon-192.png',
     tag:   d.tag || 'familia',
     renotify: true,
     data:  { url: d.url || './' }
