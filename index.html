@@ -47,44 +47,155 @@
   #frame{position:fixed;inset:0;width:100%;height:100%;border:0;
     display:block;background:#080B12}
 
+  /* ── Black Glass Splash ───────────────────────────── */
   #veil{position:fixed;inset:0;z-index:10;
     display:flex;align-items:center;justify-content:center;
-    background:#080B12;transition:opacity .45s ease}
+    overflow:hidden;background:#070507;transition:opacity .55s ease}
   #veil.hide{opacity:0;pointer-events:none}
-  #veil::before{content:'';position:absolute;inset:0;
-    background:radial-gradient(ellipse 70% 45% at 50% 30%,rgba(121,214,236,.11),transparent 70%),
-               radial-gradient(ellipse 90% 50% at 50% 100%,rgba(217,186,107,.07),transparent 70%)}
 
-  #motes{position:absolute;inset:0;overflow:hidden;pointer-events:none}
-  .m{position:absolute;bottom:-30px;border-radius:50%;opacity:0;
-    animation:drift linear infinite}
+  /* 背景本體：只做極慢的呼吸位移，避免像影片一樣搶畫面 */
+  #veil::before{content:'';position:absolute;inset:-3%;
+    background:
+      linear-gradient(rgba(5,3,6,.12),rgba(5,3,6,.18)),
+      url('assets/splash/loading-bg.webp') center/cover no-repeat;
+    transform:scale(1.035);
+    animation:bgBreath 11s ease-in-out infinite alternate;
+    will-change:transform,filter}
+  @keyframes bgBreath{
+    0%{transform:scale(1.035) translate3d(-.35%,.15%,0);filter:brightness(.92) saturate(.96)}
+    100%{transform:scale(1.065) translate3d(.35%,-.15%,0);filter:brightness(1.05) saturate(1.08)}
+  }
+
+  /* 中央暗部與邊緣暈影，讓文字永遠清楚 */
+  #veil::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(circle at 50% 48%,rgba(20,13,20,.04) 0,rgba(5,3,6,.22) 37%,rgba(2,2,3,.48) 84%),
+      linear-gradient(90deg,rgba(204,44,52,.05),transparent 30%,transparent 70%,rgba(150,93,220,.06));
+  }
+
+  /* 浮游光塵：紅 / 紫 / 金，數量少、速度慢 */
+  #motes{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+  .m{position:absolute;bottom:-24px;border-radius:50%;opacity:0;
+    filter:blur(.15px);animation:drift linear infinite}
   @keyframes drift{
-    0%{transform:translate(0,0) scale(.5);opacity:0}
-    10%{opacity:.85} 50%{transform:translate(18px,-46vh) scale(1)}
-    90%{opacity:.5} 100%{transform:translate(-14px,-102vh) scale(.6);opacity:0}}
+    0%{transform:translate3d(0,0,0) scale(.45);opacity:0}
+    12%{opacity:.55}
+    55%{transform:translate3d(14px,-52vh,0) scale(1);opacity:.8}
+    88%{opacity:.35}
+    100%{transform:translate3d(-10px,-105vh,0) scale(.55);opacity:0}
+  }
 
-  .box{position:relative;text-align:center;padding:0 30px}
-  .crest{width:96px;height:96px;margin:0 auto 26px;position:relative;
-    animation:breathe 3.2s ease-in-out infinite}
-  .crest img{width:100%;height:100%;border-radius:14px;
-    box-shadow:0 0 34px rgba(217,186,107,.35)}
-  @keyframes breathe{0%,100%{transform:scale(1);filter:brightness(1)}
-                     50%{transform:scale(1.04);filter:brightness(1.15)}}
+  /* 中央霧黑玻璃卡 */
+  .box{position:relative;z-index:2;text-align:center;
+    width:min(430px,calc(100vw - 44px));
+    padding:30px 34px 28px;
+    border:1px solid rgba(244,218,163,.13);
+    border-radius:30px;
+    background:linear-gradient(145deg,rgba(17,13,18,.44),rgba(5,4,7,.26));
+    box-shadow:
+      0 28px 75px rgba(0,0,0,.42),
+      inset 0 1px 0 rgba(255,255,255,.06),
+      0 0 58px rgba(210,164,87,.05);
+    backdrop-filter:blur(14px) saturate(1.1);
+    -webkit-backdrop-filter:blur(14px) saturate(1.1);
+    overflow:hidden;
+  }
 
-  .en{font-family:'FF',serif;font-size:16px;letter-spacing:7px;color:#B99A50}
-  .cn{font-family:'FF',serif;font-size:52px;color:#F3DFA3;letter-spacing:4px;
+  /* 玻璃表面很慢地掃一道光 */
+  .box::after{content:'';position:absolute;top:-30%;bottom:-30%;left:-45%;
+    width:32%;pointer-events:none;
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.055),transparent);
+    transform:skewX(-18deg);
+    animation:glassSweep 5.8s ease-in-out infinite}
+  @keyframes glassSweep{
+    0%,58%{transform:translateX(0) skewX(-18deg);opacity:0}
+    66%{opacity:1}
+    84%{opacity:.65}
+    100%{transform:translateX(520%) skewX(-18deg);opacity:0}
+  }
+
+  .crest{width:104px;height:104px;margin:0 auto 24px;position:relative;
+    animation:crestFloat 3.8s ease-in-out infinite}
+  .crest::before{content:'';position:absolute;inset:-14px;border-radius:28px;
+    background:radial-gradient(circle,rgba(228,184,101,.22),rgba(192,50,68,.08) 43%,rgba(139,92,205,.05) 58%,transparent 72%);
+    filter:blur(7px);animation:auraPulse 3.8s ease-in-out infinite}
+  .crest img{position:relative;width:100%;height:100%;border-radius:22px;
+    box-shadow:0 12px 34px rgba(0,0,0,.34),0 0 24px rgba(225,181,96,.17)}
+  @keyframes crestFloat{
+    0%,100%{transform:translateY(0) scale(1)}
+    50%{transform:translateY(-5px) scale(1.025)}
+  }
+  @keyframes auraPulse{
+    0%,100%{opacity:.62;transform:scale(.96)}
+    50%{opacity:1;transform:scale(1.06)}
+  }
+
+  .en{font-family:'FF',serif;font-size:15px;letter-spacing:7px;color:#C7A660;
+    text-shadow:0 0 18px rgba(217,186,107,.12)}
+  .cn{font-family:'FF',serif;font-size:50px;color:#F4DDA6;letter-spacing:4px;
     margin-top:8px;line-height:1.05;-webkit-font-smoothing:antialiased;
-    text-shadow:0 0 26px rgba(217,186,107,.5)}
-  .zh{font-size:19px;letter-spacing:5px;color:#E6E2D6;margin-top:8px;font-weight:500}
+    text-shadow:0 0 24px rgba(217,186,107,.24)}
+  .zh{font-size:18px;letter-spacing:5px;color:#E9E0D8;margin-top:9px;font-weight:600}
 
-  .bar{width:190px;height:2px;margin:34px auto 0;background:#1C2334;
-    overflow:hidden;position:relative}
-  .bar i{position:absolute;inset:0;width:38%;
-    background:linear-gradient(90deg,transparent,#F3DFA3,transparent);
-    animation:sweep 1.5s ease-in-out infinite}
-  @keyframes sweep{0%{transform:translateX(-120%)}100%{transform:translateX(370%)}}
+  /* 雙色匯流玻璃膠囊 Loading */
+  .bar{width:min(238px,72vw);height:9px;margin:31px auto 0;
+    position:relative;overflow:hidden;border-radius:999px;
+    border:1px solid rgba(246,224,180,.18);
+    background:rgba(4,3,6,.52);
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.05),0 0 20px rgba(0,0,0,.20)}
+  .bar::before{content:'';position:absolute;inset:1px;border-radius:999px;
+    background:linear-gradient(90deg,
+      rgba(215,63,68,.30) 0%,
+      rgba(204,55,71,.12) 28%,
+      rgba(228,190,112,.08) 50%,
+      rgba(150,95,219,.12) 72%,
+      rgba(152,94,216,.30) 100%);
+    animation:barBreath 2.4s ease-in-out infinite}
+  .bar::after{content:'';position:absolute;top:50%;left:50%;
+    width:8px;height:8px;border-radius:50%;
+    background:#FFE8A9;box-shadow:0 0 7px #FFD87B,0 0 17px rgba(255,201,104,.72);
+    transform:translate(-50%,-50%) scale(.8);
+    animation:centerPulse 1.8s ease-in-out infinite}
+  .bar i{position:absolute;top:1px;bottom:1px;left:-34%;width:34%;border-radius:999px;
+    background:linear-gradient(90deg,
+      transparent,
+      rgba(220,65,73,.70) 25%,
+      rgba(244,194,104,.98) 55%,
+      rgba(164,103,225,.76) 82%,
+      transparent);
+    filter:blur(.15px);
+    box-shadow:0 0 12px rgba(231,188,102,.36);
+    animation:glassLoad 1.75s cubic-bezier(.45,.05,.55,.95) infinite}
+  @keyframes glassLoad{
+    0%{transform:translateX(0);opacity:.15}
+    15%{opacity:1}
+    85%{opacity:1}
+    100%{transform:translateX(690%);opacity:.15}
+  }
+  @keyframes barBreath{
+    0%,100%{opacity:.58}
+    50%{opacity:1}
+  }
+  @keyframes centerPulse{
+    0%,100%{transform:translate(-50%,-50%) scale(.72);opacity:.62}
+    50%{transform:translate(-50%,-50%) scale(1.18);opacity:1}
+  }
 
-  .st{margin-top:16px;font-size:13px;color:#7E7A6C;font-weight:600;letter-spacing:1px}
+  .st{margin-top:15px;font-size:12px;color:#B8A9A8;font-weight:700;letter-spacing:2px}
+
+  @media(max-width:520px){
+    .box{width:min(388px,calc(100vw - 30px));padding:25px 24px 24px;border-radius:26px}
+    .crest{width:92px;height:92px;margin-bottom:20px}
+    .cn{font-size:43px}
+    .en{font-size:13px;letter-spacing:5.5px}
+    .zh{font-size:16px}
+  }
+
+  @media(prefers-reduced-motion:reduce){
+    #veil::before,.m,.box::after,.crest,.crest::before,.bar::before,.bar::after,.bar i{
+      animation:none!important
+    }
+  }
   .go{display:none;margin:24px auto 0;padding:15px 42px;cursor:pointer;
     background:linear-gradient(180deg,#2A3450,#141C2C);color:#F3DFA3;
     border:1px solid #6E5C2E;font-family:'FF',serif;font-size:22px;font-weight:400;
@@ -158,7 +269,7 @@ var APP = 'https://script.google.com/macros/s/AKfycby4EFTw-rAUK0T4yZLPm-Y0qEIhdM
 
 /* 光點 */
 (function(){
-  var c = ['rgba(121,214,236,.9)','rgba(217,186,107,.9)','rgba(200,230,255,.7)'], h = '';
+  var c = ['rgba(213,62,70,.78)','rgba(229,188,101,.82)','rgba(157,101,219,.76)'], h = '';
   for (var i = 0; i < 20; i++) {
     var s = 1.5 + Math.random() * 3.5;
     h += '<span class="m" style="left:' + (Math.random()*100).toFixed(1) + '%;' +
