@@ -220,7 +220,9 @@ frame.addEventListener('load', function(){
   setTimeout(function(){ veil.classList.add('hide'); }, 400);
   /* 稍等內層 listener 掛好再送 */
   setTimeout(function(){
-    try { frame.contentWindow.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
+    /* 送給自報家門拿到的那個視窗。還沒接上線也沒關係 ——
+       famhello 進來的時候會再補送一次。 */
+    try { if (gasWin) gasWin.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
   }, 300);
   /* 等畫面穩了再問通知。一進來就跳，感覺像廣告。 */
   setTimeout(pushGate, 2500);
@@ -352,9 +354,33 @@ function npcFail(where, err){
 
    ⚠️ iframe 可能還沒載好（載入中／剛換頁），所以要重試，不能只送一次。 */
 var pmSeq = 0, pmWait = {};
+
+/* 🔴🔴 2026-09-15：這是「訂閱一直失敗」真正的原因。
+   GAS 的 /exec 不是直接回我們要的 HTML ——
+   script.google.com 先回一層自己的頁面，裡面再包一個
+   googleusercontent 的 iframe，App 的程式跑在那一層。
+
+   所以 frame.contentWindow 是 script.google.com 那層殼，
+   往它 postMessage，訊息就停在那裡，不會往下傳。
+   App 那邊的 listener 永遠收不到，於是永遠沒有人回話 ——
+   畫面上看到的就是「App 畫面沒回應」，而且怎麼重試都一樣。
+   （famsafe 也一樣沒送到過，只是瀏海少墊一點，看不太出來。）
+
+   往上送沒問題。所以反過來：App 一載好就自報家門（famhello），
+   我們把那個 ev.source 記下來 —— 那才是真正的「App 那一層」，
+   之後所有東西都送給它。 */
+var gasWin = null;
+
 window.addEventListener('message', function(ev){
   var d = ev.data;
-  if (!d || d.t !== 'fampushres') return;
+  if (!d) return;
+  if (d.t === 'famhello') {
+    gasWin = ev.source;
+    try { gasWin.postMessage({ t:'famhi' }, '*'); } catch(e){}
+    try { gasWin.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
+    return;
+  }
+  if (d.t !== 'fampushres') return;
   var f = pmWait[d.id];
   if (f) { delete pmWait[d.id]; f(d.r || {}); }
 });
@@ -380,7 +406,9 @@ function send(act, extra, ms){
     pmWait[id] = function(r){ done = true; res(r); };
     var msg = { t:'fampush', act:act, id:id };
     for (var k in extra) msg[k] = extra[k];
-    try { frame.contentWindow.postMessage(msg, '*'); }
+    var w = gasWin;        /* 一定要用自報家門拿到的那個視窗，不能用 frame.contentWindow */
+    if (!w) { delete pmWait[id]; rej(new Error('App 畫面還沒跟外殼接上線')); return; }
+    try { w.postMessage(msg, '*'); }
     catch(e){ delete pmWait[id]; rej(new Error('送不進 App 畫面：' + e.message)); return; }
     setTimeout(function(){
       if (done) return;
@@ -391,12 +419,21 @@ function send(act, extra, ms){
   });
 }
 
-/** iframe 裡的接線活著嗎。最多敲 10 次、每次 0.8 秒（約 8 秒） */
+/** 等 App 自報家門，再敲一次 ping 確認接線活著。最多約 12 秒。 */
 function alive(tries){
   tries = tries || 0;
-  return send('ping', {}, 800).catch(function(){
-    if (tries < 10) return alive(tries + 1);
-    throw new Error('App 畫面沒回應。如果現在停在輸入 PIN 那一頁，先登入進去再開通知。');
+  if (!gasWin) {
+    if (tries > 24) {
+      return Promise.reject(new Error(
+        'App 畫面還沒跟外殼接上線。如果現在停在輸入 PIN 那一頁，先登入進去再開通知。'));
+    }
+    return new Promise(function(r){ setTimeout(r, 500); }).then(function(){
+      return alive(tries + 1);
+    });
+  }
+  return send('ping', {}, 1200).catch(function(){
+    if (tries < 24) return alive(tries + 1);
+    throw new Error('App 畫面沒回應。試著把 App 整個關掉重開一次。');
   });
 }
 
