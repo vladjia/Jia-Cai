@@ -47,80 +47,86 @@
   #frame{position:fixed;inset:0;width:100%;height:100%;border:0;
     display:block;background:#080B12}
 
-  /* ── Black Glass Splash ───────────────────────────── */
-  #veil{position:fixed;inset:0;z-index:10;
+  /* ── Black Glass Video Splash ─────────────────────── */
+  #veil{
+    position:fixed;inset:0;z-index:10;
     display:flex;align-items:center;justify-content:center;
-    overflow:hidden;background:#070507;transition:opacity .55s ease}
+    overflow:hidden;
+    background:#070507 url('assets/splash/loading-bg.webp') center/cover no-repeat;
+    transition:opacity .55s ease
+  }
   #veil.hide{opacity:0;pointer-events:none}
 
-  /* 背景本體：只做極慢的呼吸位移，避免像影片一樣搶畫面 */
-  #veil::before{content:'';position:absolute;inset:-3%;
-    background:
-      linear-gradient(rgba(5,3,6,.12),rgba(5,3,6,.18)),
-      url('assets/splash/loading-bg.webp') center/cover no-repeat;
-    transform:scale(1.035);
-    animation:bgBreath 11s ease-in-out infinite alternate;
-    will-change:transform,filter}
-  @keyframes bgBreath{
-    0%{transform:scale(1.035) translate3d(-.35%,.15%,0);filter:brightness(.92) saturate(.96)}
-    100%{transform:scale(1.065) translate3d(.35%,-.15%,0);filter:brightness(1.05) saturate(1.08)}
+  /* 桌機 / 手機會由 JS 自動選不同影片 */
+  #splashVideo{
+    position:absolute;inset:0;z-index:0;
+    width:100%;height:100%;
+    object-fit:cover;
+    object-position:center center;
+    background:#070507;
+    pointer-events:none;
   }
 
-  /* 中央暗部與邊緣暈影，讓文字永遠清楚 */
-  #veil::after{content:'';position:absolute;inset:0;pointer-events:none;
+  /* 讓中央 HTML 文字維持清楚，但不再用大玻璃卡蓋住影片 */
+  #veil::after{
+    content:'';
+    position:absolute;inset:0;z-index:1;pointer-events:none;
     background:
-      radial-gradient(circle at 50% 48%,rgba(20,13,20,.04) 0,rgba(5,3,6,.22) 37%,rgba(2,2,3,.48) 84%),
-      linear-gradient(90deg,rgba(204,44,52,.05),transparent 30%,transparent 70%,rgba(150,93,220,.06));
+      radial-gradient(circle at 50% 48%,
+        rgba(4,3,6,.03) 0%,
+        rgba(4,3,6,.05) 25%,
+        rgba(3,2,5,.18) 65%,
+        rgba(2,2,3,.34) 100%);
   }
 
-  /* 浮游光塵：紅 / 紫 / 金，數量少、速度慢 */
-  #motes{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
-  .m{position:absolute;bottom:-24px;border-radius:50%;opacity:0;
-    filter:blur(.15px);animation:drift linear infinite}
+  /* 少量前景光塵 */
+  #motes{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}
+  .m{
+    position:absolute;bottom:-24px;border-radius:50%;opacity:0;
+    filter:blur(.15px);
+    animation:drift linear infinite
+  }
   @keyframes drift{
     0%{transform:translate3d(0,0,0) scale(.45);opacity:0}
-    12%{opacity:.55}
-    55%{transform:translate3d(14px,-52vh,0) scale(1);opacity:.8}
-    88%{opacity:.35}
+    12%{opacity:.42}
+    55%{transform:translate3d(14px,-52vh,0) scale(1);opacity:.62}
+    88%{opacity:.26}
     100%{transform:translate3d(-10px,-105vh,0) scale(.55);opacity:0}
   }
 
-  /* 中央霧黑玻璃卡 */
-  .box{position:relative;z-index:2;text-align:center;
+  /* 影片本身已經有紅／金／紫讀條，所以中央區只疊 UI，不再模糊背景 */
+  .box{
+    position:relative;z-index:3;text-align:center;
     width:min(430px,calc(100vw - 44px));
-    padding:30px 34px 28px;
-    border:1px solid rgba(244,218,163,.13);
-    border-radius:30px;
-    background:linear-gradient(145deg,rgba(17,13,18,.44),rgba(5,4,7,.26));
-    box-shadow:
-      0 28px 75px rgba(0,0,0,.42),
-      inset 0 1px 0 rgba(255,255,255,.06),
-      0 0 58px rgba(210,164,87,.05);
-    backdrop-filter:blur(14px) saturate(1.1);
-    -webkit-backdrop-filter:blur(14px) saturate(1.1);
-    overflow:hidden;
+    padding:20px 28px 18px;
+    border:0;border-radius:0;
+    background:transparent;
+    box-shadow:none;
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+    overflow:visible;
   }
+  .box::after{display:none}
 
-  /* 玻璃表面很慢地掃一道光 */
-  .box::after{content:'';position:absolute;top:-30%;bottom:-30%;left:-45%;
-    width:32%;pointer-events:none;
-    background:linear-gradient(90deg,transparent,rgba(255,255,255,.055),transparent);
-    transform:skewX(-18deg);
-    animation:glassSweep 5.8s ease-in-out infinite}
-  @keyframes glassSweep{
-    0%,58%{transform:translateX(0) skewX(-18deg);opacity:0}
-    66%{opacity:1}
-    84%{opacity:.65}
-    100%{transform:translateX(520%) skewX(-18deg);opacity:0}
+  .crest{
+    width:104px;height:104px;margin:0 auto 24px;position:relative;
+    animation:crestFloat 3.8s ease-in-out infinite
   }
-
-  .crest{width:104px;height:104px;margin:0 auto 24px;position:relative;
-    animation:crestFloat 3.8s ease-in-out infinite}
-  .crest::before{content:'';position:absolute;inset:-14px;border-radius:28px;
-    background:radial-gradient(circle,rgba(228,184,101,.22),rgba(192,50,68,.08) 43%,rgba(139,92,205,.05) 58%,transparent 72%);
-    filter:blur(7px);animation:auraPulse 3.8s ease-in-out infinite}
-  .crest img{position:relative;width:100%;height:100%;border-radius:22px;
-    box-shadow:0 12px 34px rgba(0,0,0,.34),0 0 24px rgba(225,181,96,.17)}
+  .crest::before{
+    content:'';position:absolute;inset:-14px;border-radius:28px;
+    background:radial-gradient(circle,
+      rgba(228,184,101,.20),
+      rgba(192,50,68,.07) 43%,
+      rgba(139,92,205,.05) 58%,
+      transparent 72%);
+    filter:blur(7px);
+    animation:auraPulse 3.8s ease-in-out infinite
+  }
+  .crest img{
+    position:relative;width:100%;height:100%;
+    border-radius:22px;
+    box-shadow:0 12px 34px rgba(0,0,0,.34),0 0 24px rgba(225,181,96,.17)
+  }
   @keyframes crestFloat{
     0%,100%{transform:translateY(0) scale(1)}
     50%{transform:translateY(-5px) scale(1.025)}
@@ -130,42 +136,65 @@
     50%{opacity:1;transform:scale(1.06)}
   }
 
-  .en{font-family:'FF',serif;font-size:15px;letter-spacing:7px;color:#C7A660;
-    text-shadow:0 0 18px rgba(217,186,107,.12)}
-  .cn{font-family:'FF',serif;font-size:50px;color:#F4DDA6;letter-spacing:4px;
+  .en{
+    font-family:'FF',serif;font-size:15px;letter-spacing:7px;
+    color:#C7A660;text-shadow:0 0 18px rgba(217,186,107,.12)
+  }
+  .cn{
+    font-family:'FF',serif;font-size:50px;color:#F4DDA6;letter-spacing:4px;
     margin-top:8px;line-height:1.05;-webkit-font-smoothing:antialiased;
-    text-shadow:0 0 24px rgba(217,186,107,.24)}
-  .zh{font-size:18px;letter-spacing:5px;color:#E9E0D8;margin-top:9px;font-weight:600}
+    text-shadow:0 0 24px rgba(217,186,107,.24)
+  }
+  .zh{
+    font-size:18px;letter-spacing:5px;color:#E9E0D8;
+    margin-top:9px;font-weight:600
+  }
 
-  /* 雙色匯流玻璃膠囊 Loading */
-  .bar{width:min(238px,72vw);height:9px;margin:31px auto 0;
+  /*
+    FLOW 影片已包含讀條。
+    這顆 HTML .bar 保留占位，因為原程式 load()/watchdog 仍會操作它；
+    正常影片時隱藏，影片載入失敗才顯示 CSS 備援讀條。
+  */
+  .bar{
+    width:min(238px,72vw);height:9px;margin:31px auto 0;
     position:relative;overflow:hidden;border-radius:999px;
     border:1px solid rgba(246,224,180,.18);
     background:rgba(4,3,6,.52);
-    box-shadow:inset 0 1px 2px rgba(255,255,255,.05),0 0 20px rgba(0,0,0,.20)}
-  .bar::before{content:'';position:absolute;inset:1px;border-radius:999px;
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.05),0 0 20px rgba(0,0,0,.20);
+    visibility:hidden;
+  }
+  body.splash-video-failed .bar{visibility:visible}
+
+  .bar::before{
+    content:'';position:absolute;inset:1px;border-radius:999px;
     background:linear-gradient(90deg,
       rgba(215,63,68,.30) 0%,
       rgba(204,55,71,.12) 28%,
       rgba(228,190,112,.08) 50%,
       rgba(150,95,219,.12) 72%,
       rgba(152,94,216,.30) 100%);
-    animation:barBreath 2.4s ease-in-out infinite}
-  .bar::after{content:'';position:absolute;top:50%;left:50%;
+    animation:barBreath 2.4s ease-in-out infinite
+  }
+  .bar::after{
+    content:'';position:absolute;top:50%;left:50%;
     width:8px;height:8px;border-radius:50%;
-    background:#FFE8A9;box-shadow:0 0 7px #FFD87B,0 0 17px rgba(255,201,104,.72);
+    background:#FFE8A9;
+    box-shadow:0 0 7px #FFD87B,0 0 17px rgba(255,201,104,.72);
     transform:translate(-50%,-50%) scale(.8);
-    animation:centerPulse 1.8s ease-in-out infinite}
-  .bar i{position:absolute;top:1px;bottom:1px;left:-34%;width:34%;border-radius:999px;
+    animation:centerPulse 1.8s ease-in-out infinite
+  }
+  .bar i{
+    position:absolute;top:1px;bottom:1px;left:-34%;
+    width:34%;border-radius:999px;
     background:linear-gradient(90deg,
       transparent,
       rgba(220,65,73,.70) 25%,
       rgba(244,194,104,.98) 55%,
       rgba(164,103,225,.76) 82%,
       transparent);
-    filter:blur(.15px);
     box-shadow:0 0 12px rgba(231,188,102,.36);
-    animation:glassLoad 1.75s cubic-bezier(.45,.05,.55,.95) infinite}
+    animation:glassLoad 1.75s cubic-bezier(.45,.05,.55,.95) infinite
+  }
   @keyframes glassLoad{
     0%{transform:translateX(0);opacity:.15}
     15%{opacity:1}
@@ -181,10 +210,22 @@
     50%{transform:translate(-50%,-50%) scale(1.18);opacity:1}
   }
 
-  .st{margin-top:15px;font-size:12px;color:#B8A9A8;font-weight:700;letter-spacing:2px}
+  .st{
+    margin-top:15px;font-size:12px;color:#B8A9A8;
+    font-weight:700;letter-spacing:2px;
+    text-shadow:0 2px 10px rgba(0,0,0,.78)
+  }
 
-  @media(max-width:520px){
-    .box{width:min(388px,calc(100vw - 30px));padding:25px 24px 24px;border-radius:26px}
+  /* 真正的手機直式影片，直接吃 9:16，不再裁橫圖 */
+  @media(max-width:700px) and (orientation:portrait){
+    #splashVideo{
+      object-fit:cover;
+      object-position:center center;
+    }
+    .box{
+      width:min(388px,calc(100vw - 26px));
+      padding:18px 20px 16px;
+    }
     .crest{width:92px;height:92px;margin-bottom:20px}
     .cn{font-size:43px}
     .en{font-size:13px;letter-spacing:5.5px}
@@ -192,7 +233,7 @@
   }
 
   @media(prefers-reduced-motion:reduce){
-    #veil::before,.m,.box::after,.crest,.crest::before,.bar::before,.bar::after,.bar i{
+    .m,.crest,.crest::before,.bar::before,.bar::after,.bar i{
       animation:none!important
     }
   }
@@ -236,6 +277,7 @@
         allow="clipboard-write"></iframe>
 
 <div id="veil">
+<video id="splashVideo" autoplay muted loop playsinline webkit-playsinline preload="auto" aria-hidden="true"></video>
 <div id="motes"></div>
 
 <div class="box">
@@ -266,6 +308,71 @@
 <script>
 /* ══ 把這條換成你的 GAS 網頁應用程式網址 ══ */
 var APP = 'https://script.google.com/macros/s/AKfycby4EFTw-rAUK0T4yZLPm-Y0qEIhdMYnOaX1Htk1_NlrKan3UdW08QgJfRpfOGtDvEFOHg/exec';
+
+/* ── Loading 影片：手機直式 / 其他裝置自動切換 ── */
+(function(){
+  var v = document.getElementById('splashVideo');
+  if (!v) return;
+
+  var mqMobile = window.matchMedia('(max-width:700px) and (orientation:portrait)');
+  var current = '';
+
+  function wanted(){
+    return mqMobile.matches
+      ? 'assets/splash/loading-mobile.mp4'
+      : 'assets/splash/loading-desktop.mp4';
+  }
+
+  function useRightVideo(){
+    var src = wanted();
+    if (src === current) return;
+    current = src;
+
+    document.body.classList.remove('splash-video-failed');
+
+    try {
+      v.pause();
+      v.removeAttribute('src');
+      while (v.firstChild) v.removeChild(v.firstChild);
+      v.load();
+
+      v.muted = true;
+      v.defaultMuted = true;
+      v.playsInline = true;
+      v.src = src;
+      v.load();
+
+      var p = v.play();
+      if (p && typeof p.catch === 'function') {
+        p.catch(function(){
+          /* muted autoplay 若仍被瀏覽器擋，靜態背景仍會保留 */
+        });
+      }
+    } catch(e) {
+      document.body.classList.add('splash-video-failed');
+    }
+  }
+
+  v.addEventListener('loadeddata', function(){
+    document.body.classList.remove('splash-video-failed');
+  });
+
+  v.addEventListener('error', function(){
+    document.body.classList.add('splash-video-failed');
+  });
+
+  if (mqMobile.addEventListener) {
+    mqMobile.addEventListener('change', useRightVideo);
+  } else if (mqMobile.addListener) {
+    mqMobile.addListener(useRightVideo);
+  }
+
+  window.addEventListener('orientationchange', function(){
+    setTimeout(useRightVideo, 120);
+  });
+
+  useRightVideo();
+})();
 
 /* 光點 */
 (function(){
