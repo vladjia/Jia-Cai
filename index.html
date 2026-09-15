@@ -57,10 +57,18 @@
 
   #frame{
     position:fixed;
-    top:0;right:0;bottom:0;left:0;
-    width:100vw;
-    height:100vh;   /* 舊 Safari fallback */
-    height:100dvh;  /* iPhone / PWA 實際可視高度 */
+    top:0;
+    left:0;
+    right:0;
+
+    /* iPhone PWA 底部 safe-area：
+       fixed 的可視區有時會停在 Home Indicator 上方，
+       所以直接把 iframe 往下延伸到 safe-area 裡。
+       外層本來就 overflow:hidden，超出去的部分不會造成第二個捲軸。 */
+    bottom:calc(env(safe-area-inset-bottom, 0px) * -1);
+
+    width:auto;
+    height:auto;
     border:0;
     display:block;
     background:#080B12;
