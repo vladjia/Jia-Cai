@@ -1,7 +1,7 @@
 /* FAMILIA PWA — Network First，離線時回退快取 */
 /* 版號 = 改檔日期。動任何 SHELL 內的檔案就把這行改掉，
    sw.js 位元組一變，瀏覽器自然重跑 install。 */
-const CACHE = 'familia-20260914b';
+const CACHE = 'familia-20260915a';
 
 const SHELL = [
   './',

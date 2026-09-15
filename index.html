@@ -339,23 +339,52 @@ function npcFail(where, err){
    🔴 一定要看後端回什麼。以前只看 fetch 有沒有丟例外 ——
       GAS 找不到 doPost 時會回 200 ＋ 一張錯誤頁，
       那種情況「沒有例外」，但其實一筆都沒存進去。 */
+/* ══ 跟 iframe 講話 ══════════════════════════
+   🔴 為什麼不直接 fetch GAS：
+      2026-09-15 凌晨，同一條 `?fn=pushkey` 連打三次拿到 HTML、逾時、404 三種結果。
+      跨網域那條路太多變數（CORS、部署存取權限、doPost 有沒有被蓋掉、
+      Google 的轉址），而且每一種壞法在 console 都長得一樣。
+
+      可是 iframe 裡面本來就在 GAS 的網域上，google.script.run 一直好好的
+      —— 菜菜的 App 整晚都正常，只有訂閱失敗。
+      所以改成：外殼負責產生訂閱（SW 只屬於這個網域），
+      iframe 負責跟後端講話。沒有 CORS、不碰 doPost。
+
+   ⚠️ iframe 可能還沒載好（載入中／剛換頁），所以要重試，不能只送一次。 */
+var pmSeq = 0, pmWait = {};
+window.addEventListener('message', function(ev){
+  var d = ev.data;
+  if (!d || d.t !== 'fampushres') return;
+  var f = pmWait[d.id];
+  if (f) { delete pmWait[d.id]; f(d.r || {}); }
+});
+
+function ask(act, extra, tries){
+  tries = tries || 0;
+  return new Promise(function(res, rej){
+    var id = ++pmSeq;
+    var done = false;
+    pmWait[id] = function(r){ done = true; res(r); };
+    var msg = { t:'fampush', act:act, id:id };
+    for (var k in extra) msg[k] = extra[k];
+    try { frame.contentWindow.postMessage(msg, '*'); }
+    catch(e){ delete pmWait[id]; rej(new Error('送不進 App 畫面：' + e.message)); return; }
+
+    setTimeout(function(){
+      if (done) return;
+      delete pmWait[id];
+      /* 最多等 3 輪（約 6 秒）。iframe 通常 2 秒內就掛好 listener 了。 */
+      if (tries < 3) { ask(act, extra, tries + 1).then(res, rej); return; }
+      rej(new Error('App 畫面沒回應。請確定家菜金已經載入完成（看得到記帳畫面）再按一次。'));
+    }, 2000);
+  });
+}
+
 function sendSub(sub){
-  var tk = localStorage.getItem('FAM_TK') || '';
-  if (!tk)  return Promise.reject(new Error('沒有 token，先登入'));
   if (!sub) return Promise.reject(new Error('沒有訂閱物件'));
-  return fetch(APP, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ act:'pushSub', token: tk, sub: sub.toJSON(), device: devName() })
-  }).then(function(r){
-    return r.text().then(function(t){
-      var j = null;
-      try { j = JSON.parse(t); } catch(_){}
-      if (!j) throw new Error('後端沒回 JSON（HTTP ' + r.status +
-        '）。多半是 GAS 還沒重新部署，doPost 不存在。收到：' + t.slice(0, 120));
-      if (!j.ok) throw new Error('後端說：' + (j.msg || '(沒說原因)'));
-      return true;
-    });
+  return ask('sub', { sub: sub.toJSON(), device: devName() }).then(function(r){
+    if (!r || !r.ok) throw new Error((r && r.msg) || '後端沒說原因');
+    return true;
   });
 }
 
@@ -367,16 +396,13 @@ function famPush(force){
       return force ? old.unsubscribe().then(function(){ return null; }) : old;
     }).then(function(sub){
       if (sub) return sub;
-      return fetch(APP + '?fn=pushkey')
-        .then(function(r){ return r.text(); })
-        .then(function(t){
-          var j = null;
-          try { j = JSON.parse(t); } catch(_){}
-          if (!j || !j.key) throw new Error('拿不到公鑰。GAS 沒重新部署，' +
-            '或 PUSH_PUBLIC_KEY 沒設。收到：' + t.slice(0, 120));
-          return reg.pushManager.subscribe({
-            userVisibleOnly: true, applicationServerKey: b64key(j.key) });
-        });
+      return ask('key', {}).then(function(j){
+        if (!j || !j.ok || !j.key) {
+          throw new Error((j && j.msg) || '拿不到公鑰（後端 PUSH_PUBLIC_KEY 沒設？）');
+        }
+        return reg.pushManager.subscribe({
+          userVisibleOnly: true, applicationServerKey: b64key(j.key) });
+      });
     }).then(sendSub);
   }).then(function(){
     npcShow('通知已開啟', '之後對帳日、匯款單這些我會直接提醒你。',
