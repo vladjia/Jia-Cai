@@ -359,25 +359,49 @@ window.addEventListener('message', function(ev){
   if (f) { delete pmWait[d.id]; f(d.r || {}); }
 });
 
-function ask(act, extra, tries){
-  tries = tries || 0;
+/* 🔴 2026-09-15 改：本來是「送出去，2 秒沒回就重送，最多 4 次」。
+   那個設計有兩個問題，而且合起來讓訂閱變成看運氣：
+
+     1. google.script.run 一趟本來就常常要 3~8 秒（冷啟動更久）。
+        2 秒根本不夠，所以正常的一次呼叫也會被判逾時。
+     2. 重送不是「取消上一次再送」—— 上一次已經打到後端了。
+        apiPushSub 裡面有 LockService，四次重送會互相搶同一把鎖，
+        每一次都等前一個做完，越重試越慢，最後全部逾時。
+        更糟的是：後端其實已經存進去了，畫面卻說失敗。
+
+   現在拆成兩段：
+     ping  只問「iframe 裡的接線活著嗎」，不碰後端，所以可以短逾時＋重試
+     其他  真的要打後端，長逾時（45 秒）而且**不重試**
+
+   分開之後，錯誤訊息也才分得出來是「畫面還沒載好」還是「Google 在忙」。 */
+function send(act, extra, ms){
   return new Promise(function(res, rej){
-    var id = ++pmSeq;
-    var done = false;
+    var id = ++pmSeq, done = false;
     pmWait[id] = function(r){ done = true; res(r); };
     var msg = { t:'fampush', act:act, id:id };
     for (var k in extra) msg[k] = extra[k];
     try { frame.contentWindow.postMessage(msg, '*'); }
     catch(e){ delete pmWait[id]; rej(new Error('送不進 App 畫面：' + e.message)); return; }
-
     setTimeout(function(){
       if (done) return;
       delete pmWait[id];
-      /* 最多等 3 輪（約 6 秒）。iframe 通常 2 秒內就掛好 listener 了。 */
-      if (tries < 3) { ask(act, extra, tries + 1).then(res, rej); return; }
-      rej(new Error('App 畫面沒回應。請確定家菜金已經載入完成（看得到記帳畫面）再按一次。'));
-    }, 2000);
+      rej(new Error('等了 ' + Math.round(ms / 1000) +
+        ' 秒後端還沒回。Google 那邊忙的時候會這樣，等一下再按重試就好。'));
+    }, ms);
   });
+}
+
+/** iframe 裡的接線活著嗎。最多敲 10 次、每次 0.8 秒（約 8 秒） */
+function alive(tries){
+  tries = tries || 0;
+  return send('ping', {}, 800).catch(function(){
+    if (tries < 10) return alive(tries + 1);
+    throw new Error('App 畫面沒回應。如果現在停在輸入 PIN 那一頁，先登入進去再開通知。');
+  });
+}
+
+function ask(act, extra){
+  return alive().then(function(){ return send(act, extra, 45000); });
 }
 
 function sendSub(sub){
@@ -388,22 +412,43 @@ function sendSub(sub){
   });
 }
 
-/** 從頭走一次：拿公鑰 → 訂閱 → 存後端。force=true 會先退掉舊訂閱。 */
+/** 已經有訂閱了，只是回報一次給後端。兩次都失敗才吵他。 */
+function renew(sub, n){
+  return sendSub(sub).catch(function(err){
+    if (n >= 1) { npcFail('存進後端', err); return; }
+    setTimeout(function(){ renew(sub, n + 1); }, 20000);
+  });
+}
+
+/** 從頭走一次：拿公鑰 → 訂閱 → 存後端。force=true 會先退掉舊訂閱。
+    🔴 每一步都把字寫到卡片上 —— 手機沒有 console，
+       不寫的話 45 秒的等待跟「當掉了」長得一模一樣。 */
+var pushStep = '';
+function step(where, txt){
+  pushStep = where;
+  npcM.textContent = txt; npcM.className = '';
+}
 function famPush(force){
+  step('啟動', '準備中…');
   return navigator.serviceWorker.ready.then(function(reg){
     return reg.pushManager.getSubscription().then(function(old){
       if (!old) return null;
       return force ? old.unsubscribe().then(function(){ return null; }) : old;
     }).then(function(sub){
       if (sub) return sub;
+      step('跟後端要公鑰', '跟後端要金鑰…（最久 45 秒）');
       return ask('key', {}).then(function(j){
         if (!j || !j.ok || !j.key) {
           throw new Error((j && j.msg) || '拿不到公鑰（後端 PUSH_PUBLIC_KEY 沒設？）');
         }
+        step('跟瀏覽器申請訂閱', '跟瀏覽器申請訂閱…');
         return reg.pushManager.subscribe({
           userVisibleOnly: true, applicationServerKey: b64key(j.key) });
       });
-    }).then(sendSub);
+    }).then(function(sub){
+      step('存進後端', '存進後端…（最久 45 秒）');
+      return sendSub(sub);
+    });
   }).then(function(){
     npcShow('通知已開啟', '之後對帳日、匯款單這些我會直接提醒你。',
             '', 'good', '好');
@@ -411,7 +456,7 @@ function famPush(force){
     try { localStorage.removeItem('FAM_PUSH_LATER'); } catch(e){}
     return true;
   }).catch(function(err){
-    npcFail(err && err.message && err.message.indexOf('公鑰') >= 0 ? '跟後端要公鑰' : '存進後端', err);
+    npcFail(pushStep || '存進後端', err);
     return false;
   });
 }
@@ -465,8 +510,11 @@ function pushGate(){
     navigator.serviceWorker.ready.then(function(reg){
       return reg.pushManager.getSubscription().then(function(sub){
         /* 已經訂過 → 續約一次。換手機、重裝、換 token 之後表上那列可能是舊的。
-           🔴 失敗要講出來 —— 這正是之前默默壞掉的地方。 */
-        if (sub) return sendSub(sub).catch(function(err){ npcFail('存進後端', err); });
+           🔴 失敗要講出來 —— 這正是之前默默壞掉的地方。
+           ⚠️ 但「一失敗就跳紅卡片」也不對：後端那一列本來就已經存在了，
+              這一趟只是續約，Google 慢一次就嚇他一次。
+              所以第一次失敗先默默等 20 秒再試一次，兩次都不行才跳。 */
+        if (sub) return renew(sub, 0);
         if (Notification.permission === 'granted') return famPush(false);
 
         var la = Number(localStorage.getItem('FAM_PUSH_LATER') || 0);
