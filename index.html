@@ -40,12 +40,31 @@
     unicode-range:U+0020-0023,U+0025-0040,U+005B-007E;font-display:swap}
 
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%;overflow:hidden}
+
+  /* iPhone / PWA viewport 修正
+     原本 fixed + inset:0 又疊 width/height:100%，
+     iOS standalone 有機會把 iframe 算成較短的 layout viewport，
+     底下就會露出外殼黑底。改用 dynamic viewport 高度覆蓋。 */
+  html,body{
+    width:100%;
+    height:100%;
+    min-height:100%;
+    overflow:hidden;
+    background:#080B12;
+  }
   body{background:#080B12;color:#E6E2D6;
     font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif}
 
-  #frame{position:fixed;inset:0;width:100%;height:100%;border:0;
-    display:block;background:#080B12}
+  #frame{
+    position:fixed;
+    top:0;right:0;bottom:0;left:0;
+    width:100vw;
+    height:100vh;   /* 舊 Safari fallback */
+    height:100dvh;  /* iPhone / PWA 實際可視高度 */
+    border:0;
+    display:block;
+    background:#080B12;
+  }
 
   /* ── Black Glass Video Splash ─────────────────────── */
   #veil{
