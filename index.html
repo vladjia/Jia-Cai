@@ -80,10 +80,22 @@
     position:fixed;inset:0;z-index:10;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;
-    background:#070507 url('assets/splash/loading-bg.webp') center/cover no-repeat;
+    /* 靜圖鋪在最底下，影片蓋在上面。
+       這兩張就是各自 mp4 的「第一幀」，所以影片接上來的瞬間看不出接縫，
+       影片沒接上（太慢／掛了／自動播放被擋）也不會出現黑畫面。
+       直式／橫式用 media query 切 —— 條件跟下面 JS 選影片的那條一模一樣，
+       而且瀏覽器只會下載「符合條件的那一張」，不會兩張都抓。
+       （2026-09-16 換掉 loading-bg.webp：那張是另一張圖，而且是橫的，
+         手機直式螢幕上左右被裁掉一大半。）*/
+    background:#070507 url('assets/splash/loading-desktop.webp') center/cover no-repeat;
     transition:opacity .55s ease
   }
   #veil.hide{opacity:0;pointer-events:none}
+
+  /* 手機直式換成直式那張。條件要跟 JS 的 mqMobile 一致，不然圖跟影片會不同張 */
+  @media (max-width:700px) and (orientation:portrait){
+    #veil{background-image:url('assets/splash/loading-mobile.webp')}
+  }
 
   /* 桌機 / 手機會由 JS 自動選不同影片 */
   #splashVideo{
@@ -373,7 +385,7 @@ var APP = 'https://script.google.com/macros/s/AKfycby4EFTw-rAUK0T4yZLPm-Y0qEIhdM
       var p = v.play();
       if (p && typeof p.catch === 'function') {
         p.catch(function(){
-          /* muted autoplay 若仍被瀏覽器擋，靜態背景仍會保留 */
+          /* muted autoplay 若仍被瀏覽器擋，底下的靜圖會頂著 */
         });
       }
     } catch(e) {
@@ -385,6 +397,7 @@ var APP = 'https://script.google.com/macros/s/AKfycby4EFTw-rAUK0T4yZLPm-Y0qEIhdM
     document.body.classList.remove('splash-video-failed');
   });
 
+  /* 影片掛了：把進度條叫出來。底下的靜圖本來就在，不用再做事。 */
   v.addEventListener('error', function(){
     document.body.classList.add('splash-video-failed');
   });
