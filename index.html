@@ -64,11 +64,10 @@
     /* 桌機 / 舊 Safari fallback */
     height:100vh;
 
-    /* iPhone PWA：
-       100dvh 只到可視內容區底部，Home Indicator 的 safe-area
-       可能另外留在下面，所以把那一段補回 iframe 高度。
-       桌機 env(...) = 0，不會影響桌機。 */
-    height:calc(100dvh + env(safe-area-inset-bottom, 0px));
+    /* iPhone PWA：iframe 就做滿可視高度，不要再額外加 safe-area。
+       多加的那一段會變成外殼跟內頁對不上的一條，反而更明顯。
+       底下那 34px 本來就歸外殼漆，靠內頁回報底色（fambg）同步。 */
+    height:100dvh;
 
     border:0;
     display:block;
@@ -482,6 +481,20 @@ window.addEventListener('message', function(ev){
   var d = ev.data;
   if (!d) return;
 
+  /* iPhone PWA 底部 safe-area 其實是外殼的區域。
+     內頁回報自己的背景色，外殼同步後就不再露黑底。 */
+  if (d.t === 'fambg') {
+    var c = String(d.color || '').trim();
+    if (/^(#[0-9a-f]{3,8}|rgba?\([^)]*\))$/i.test(c)) {
+      document.documentElement.style.backgroundColor = c;
+      document.body.style.backgroundColor = c;
+      frame.style.backgroundColor = c;
+      var mt = document.querySelector('meta[name=\"theme-color\"]');
+      if (mt) mt.setAttribute('content', c);
+    }
+    return;
+  }
+
   if (d.t === 'famnav') {
     var p = String(d.page || '');
     history.replaceState(null, '', p ? ('?page=' + encodeURIComponent(p)) : location.pathname);
@@ -820,6 +833,83 @@ if (APP.indexOf('你的部署ID') >= 0) {
 } else {
   load();
 }
+</script>
+<!-- ═══════════════════════════════════════════════
+     🔧 暫時的量尺（外殼側）—— 量完就刪
+     開 APP 就會看到，5 秒後自己淡掉，點它可以再叫出來
+     ═══════════════════════════════════════════════ -->
+<script>
+(function(){
+  var box = document.createElement('div');
+  box.style.cssText =
+    'position:fixed;left:8px;top:8px;z-index:99999;' +
+    'max-width:calc(100vw - 16px);' +
+    'background:rgba(8,11,18,.94);color:#F3DFA3;' +
+    'font:11px/1.5 ui-monospace,Menlo,monospace;' +
+    'padding:9px 11px;border-radius:10px;white-space:pre;' +
+    'border:1px solid #2A3450;transition:opacity .4s';
+  document.documentElement.appendChild(box);
+
+  function envPx(side){
+    try{
+      var p = document.createElement('div');
+      p.style.cssText='position:fixed;left:0;top:0;width:0;visibility:hidden;'+
+        'pointer-events:none;height:env(safe-area-inset-'+side+',0px)';
+      document.documentElement.appendChild(p);
+      var h=p.getBoundingClientRect().height||0;
+      p.parentNode.removeChild(p);
+      return Math.round(h);
+    }catch(e){ return -1; }
+  }
+  function unitPx(u){
+    try{
+      var p = document.createElement('div');
+      p.style.cssText='position:fixed;left:0;top:0;width:0;visibility:hidden;'+
+        'pointer-events:none;height:'+u;
+      document.documentElement.appendChild(p);
+      var h=p.getBoundingClientRect().height||0;
+      p.parentNode.removeChild(p);
+      return Math.round(h);
+    }catch(e){ return -1; }
+  }
+  function pad(s){ return (s+'              ').slice(0,14); }
+
+  function draw(){
+    var f = document.getElementById('frame');
+    var r = f ? f.getBoundingClientRect() : {top:0,bottom:0,height:0};
+    var vv = window.visualViewport;
+    box.textContent = [
+      pad('螢幕 height')  + screen.height,
+      pad('螢幕 avail')   + screen.availHeight,
+      pad('innerHeight')  + window.innerHeight,
+      pad('clientHeight') + document.documentElement.clientHeight,
+      pad('visualVP')     + (vv?Math.round(vv.height):'-'),
+      '',
+      pad('100vh')        + unitPx('100vh'),
+      pad('100dvh')       + unitPx('100dvh'),
+      pad('100lvh')       + unitPx('100lvh'),
+      pad('100svh')       + unitPx('100svh'),
+      '',
+      pad('safe top')     + envPx('top'),
+      pad('safe bottom')  + envPx('bottom'),
+      '',
+      pad('frame top')    + Math.round(r.top),
+      pad('frame bottom') + Math.round(r.bottom),
+      pad('frame 高')     + Math.round(r.height),
+      '',
+      pad('standalone')   + (window.navigator.standalone === true),
+      pad('dpr')          + window.devicePixelRatio
+    ].join('\n');
+  }
+  draw();
+  var t = setInterval(draw, 500);
+  setTimeout(function(){ box.style.opacity='0'; }, 5000);
+  box.addEventListener('click', function(){
+    box.style.opacity = (box.style.opacity === '0') ? '1' : '0';
+  });
+  window.addEventListener('resize', draw);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', draw);
+})();
 </script>
 </body>
 </html>
