@@ -52,8 +52,9 @@
     overflow:hidden;
     background:#080B12;
   }
-  body{background:#080B12;color:#E6E2D6;
-    font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif}
+    background:#00FF00;
+  }
+  body{background:#00FF00;color:#E6E2D6;
 
   #frame{
     position:fixed;
@@ -64,14 +65,22 @@
     /* 桌機 / 舊 Safari fallback */
     height:100vh;
 
+<<<<<<< HEAD
     /* iPhone PWA：iframe 就做滿可視高度，不要再額外加 safe-area。
        多加的那一段會變成外殼跟內頁對不上的一條，反而更明顯。
        底下那 34px 本來就歸外殼漆，靠內頁回報底色（fambg）同步。 */
     height:100dvh;
+=======
+    /* iPhone PWA：
+       100dvh 只到可視內容區底部，Home Indicator 的 safe-area
+       可能另外留在下面，所以把那一段補回 iframe 高度。
+       桌機 env(...) = 0，不會影響桌機。 */
+        height:100dvh;
+>>>>>>> b1858790f3d5e14d0ec2a1b0c0446c3b3b341407
 
     border:0;
     display:block;
-    background:#080B12;
+    background:#FF00FF;
   }
 
   /* ── Black Glass Video Splash ─────────────────────── */
@@ -79,10 +88,22 @@
     position:fixed;inset:0;z-index:10;
     display:flex;align-items:center;justify-content:center;
     overflow:hidden;
-    background:#070507 url('assets/splash/loading-bg.webp') center/cover no-repeat;
+    /* 靜圖鋪在最底下，影片蓋在上面。
+       這兩張就是各自 mp4 的「第一幀」，所以影片接上來的瞬間看不出接縫，
+       影片沒接上（太慢／掛了／自動播放被擋）也不會出現黑畫面。
+       直式／橫式用 media query 切 —— 條件跟下面 JS 選影片的那條一模一樣，
+       而且瀏覽器只會下載「符合條件的那一張」，不會兩張都抓。
+       （2026-09-16 換掉 loading-bg.webp：那張是另一張圖，而且是橫的，
+         手機直式螢幕上左右被裁掉一大半。）*/
+    background:#070507 url('assets/splash/loading-desktop.webp') center/cover no-repeat;
     transition:opacity .55s ease
   }
   #veil.hide{opacity:0;pointer-events:none}
+
+  /* 手機直式換成直式那張。條件要跟 JS 的 mqMobile 一致，不然圖跟影片會不同張 */
+  @media (max-width:700px) and (orientation:portrait){
+    #veil{background-image:url('assets/splash/loading-mobile.webp')}
+  }
 
   /* 桌機 / 手機會由 JS 自動選不同影片 */
   #splashVideo{
@@ -90,7 +111,10 @@
     width:100%;height:100%;
     object-fit:cover;
     object-position:center center;
-    background:#070507;
+    /* 🔴 不能有底色。video 自己的背景是不透明的，會把 #veil 鋪在下面的
+       靜圖整個蓋掉 —— 影片沒播出來的時候就是一片黑。
+       2026-09-16：這是「備援圖從來沒生效過」的真正原因。 */
+    background:transparent;
     pointer-events:none;
   }
 
@@ -372,7 +396,7 @@ var APP = 'https://script.google.com/macros/s/AKfycby4EFTw-rAUK0T4yZLPm-Y0qEIhdM
       var p = v.play();
       if (p && typeof p.catch === 'function') {
         p.catch(function(){
-          /* muted autoplay 若仍被瀏覽器擋，靜態背景仍會保留 */
+          /* muted autoplay 若仍被瀏覽器擋，底下的靜圖會頂著 */
         });
       }
     } catch(e) {
@@ -384,6 +408,7 @@ var APP = 'https://script.google.com/macros/s/AKfycby4EFTw-rAUK0T4yZLPm-Y0qEIhdM
     document.body.classList.remove('splash-video-failed');
   });
 
+  /* 影片掛了：把進度條叫出來。底下的靜圖本來就在，不用再做事。 */
   v.addEventListener('error', function(){
     document.body.classList.add('splash-video-failed');
   });
@@ -430,6 +455,8 @@ var bar   = document.querySelector('.bar');
 var watchdog = null;
 
 function load(){
+  revealed = false;
+  clearTimeout(revealTimer);
   veil.classList.remove('hide');
   bar.style.display = '';
   go.style.display  = 'none';
@@ -458,19 +485,43 @@ function safeTop(){
   return h;
 }
 
+/* ═══ 什麼時候可以把開場掀開 ═══════════════════════════
+   2026-09-16 改。以前是 iframe 一 load 完就掀 ——
+   但那一刻頁面只是**空殼**，資料還在後端算。
+   結果就是：開場漂漂亮亮地消失，然後你看著一片空白等十秒。
+
+   現在分三段：
+     1. iframe load 了，但還沒聽到內頁自報家門
+        → 1.8 秒後照舊掀開（這頁大概沒有抽屜，維持舊行為，不能拖慢它）
+     2. 聽到 famhello（＝抽屜在，famReady 一定會來）
+        → 等它說「我好了」，最多 12 秒
+     3. 收到 famready → 立刻掀開
+
+   通知邀請卡也一起移到掀開之後才跳，不然會蓋在開場上面。 */
+var revealTimer = null;
+var revealed    = false;
+
+function reveal(){
+  if (revealed) return;
+  revealed = true;
+  clearTimeout(revealTimer);
+  veil.classList.add('hide');
+  setTimeout(pushGate, 2000);
+}
+
 frame.addEventListener('load', function(){
   /* about:blank 也會觸發 load，要擋掉，不然 PIN 畫面會被掀走 */
   if (!frame.src || frame.src === 'about:blank') return;
   clearTimeout(watchdog);
-  setTimeout(function(){ veil.classList.add('hide'); }, 400);
+  st.textContent = '載入資料…';
+  clearTimeout(revealTimer);
+  revealTimer = setTimeout(reveal, 1800);
   /* 稍等內層 listener 掛好再送 */
   setTimeout(function(){
     /* 送給自報家門拿到的那個視窗。還沒接上線也沒關係 ——
        famhello 進來的時候會再補送一次。 */
     try { if (gasWin) gasWin.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
   }, 300);
-  /* 等畫面穩了再問通知。一進來就跳，感覺像廣告。 */
-  setTimeout(pushGate, 2500);
 });
 go.addEventListener('click', load);
 
@@ -495,6 +546,12 @@ window.addEventListener('message', function(ev){
     return;
   }
 
+<<<<<<< HEAD
+=======
+  /* 內頁畫完了 */
+  if (d.t === 'famready') { reveal(); return; }
+
+>>>>>>> b1858790f3d5e14d0ec2a1b0c0446c3b3b341407
   if (d.t === 'famnav') {
     var p = String(d.page || '');
     history.replaceState(null, '', p ? ('?page=' + encodeURIComponent(p)) : location.pathname);
@@ -635,6 +692,11 @@ window.addEventListener('message', function(ev){
   if (!d) return;
   if (d.t === 'famhello') {
     gasWin = ev.source;
+    /* 抽屜在 → 這頁一定會送 famready，等它。內頁自己也有 10 秒保險絲。 */
+    if (!revealed) {
+      clearTimeout(revealTimer);
+      revealTimer = setTimeout(reveal, 12000);
+    }
     try { gasWin.postMessage({ t:'famhi' }, '*'); } catch(e){}
     try { gasWin.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
     return;

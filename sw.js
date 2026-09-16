@@ -1,7 +1,7 @@
 /* FAMILIA PWA — Network First，離線時回退快取 */
 /* 版號 = 改檔日期。動任何 SHELL 內的檔案就把這行改掉，
    sw.js 位元組一變，瀏覽器自然重跑 install。 */
-const CACHE = 'familia-20260915d';
+const CACHE = 'familia-20260916c';
 
 const SHELL = [
   './',
@@ -104,6 +104,12 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   if (new URL(req.url).origin !== self.location.origin) return;
 
+  /* 影片一律直通，不要碰。
+     Safari 抓影片是用 Range 分段要的（回 206 Partial Content），
+     SW 插手會把分段搞掉，而且 206 根本存不進 Cache —— 影片就轉圈圈轉到死。 */
+  if (req.destination === 'video' || req.destination === 'audio') return;
+  if (/\.(mp4|m4v|mov|mp3|m4a)($|\?)/i.test(req.url)) return;
+
   /* HTML 導航一律繞開瀏覽器 HTTP 快取（坑C） */
   const isNav = req.mode === 'navigate' || /\.html?($|\?)/.test(req.url);
   const hit   = isNav ? fetch(req, { cache: 'no-store' }) : fetch(req);
@@ -111,10 +117,23 @@ self.addEventListener('fetch', e => {
   e.respondWith(
     hit
       .then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+        /* 🔴 只存「真的成功」的回應。
+           以前沒檢查，所以 GitHub Pages 還在發佈時回的 404
+           會被當成正常內容存進快取，之後就一直拿那份 404。 */
+        if (res && res.ok && res.status === 200 && res.type !== 'opaque') {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(req, copy)).catch(() => {});
+        }
         return res;
       })
-      .catch(() => caches.match(req).then(r => r || caches.match('./index.html')))
+      .catch(() => caches.match(req).then(r => {
+        if (r) return r;
+        /* 🔴 只有「開頁面」才可以回 index.html。
+           以前不管什麼都回它 —— 圖片拿到一份 HTML 就是破圖、
+           影片拿到一份 HTML 就是永遠不播，而且錯誤訊息完全看不出原因。
+           2026-09-16 的「logo 不見、背景全黑、影片不載」就是這個。 */
+        if (isNav) return caches.match('./index.html');
+        return Response.error();
+      }))
   );
 });
