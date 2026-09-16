@@ -447,6 +447,8 @@ var bar   = document.querySelector('.bar');
 var watchdog = null;
 
 function load(){
+  revealed = false;
+  clearTimeout(revealTimer);
   veil.classList.remove('hide');
   bar.style.display = '';
   go.style.display  = 'none';
@@ -475,19 +477,43 @@ function safeTop(){
   return h;
 }
 
+/* ═══ 什麼時候可以把開場掀開 ═══════════════════════════
+   2026-09-16 改。以前是 iframe 一 load 完就掀 ——
+   但那一刻頁面只是**空殼**，資料還在後端算。
+   結果就是：開場漂漂亮亮地消失，然後你看著一片空白等十秒。
+
+   現在分三段：
+     1. iframe load 了，但還沒聽到內頁自報家門
+        → 1.8 秒後照舊掀開（這頁大概沒有抽屜，維持舊行為，不能拖慢它）
+     2. 聽到 famhello（＝抽屜在，famReady 一定會來）
+        → 等它說「我好了」，最多 12 秒
+     3. 收到 famready → 立刻掀開
+
+   通知邀請卡也一起移到掀開之後才跳，不然會蓋在開場上面。 */
+var revealTimer = null;
+var revealed    = false;
+
+function reveal(){
+  if (revealed) return;
+  revealed = true;
+  clearTimeout(revealTimer);
+  veil.classList.add('hide');
+  setTimeout(pushGate, 2000);
+}
+
 frame.addEventListener('load', function(){
   /* about:blank 也會觸發 load，要擋掉，不然 PIN 畫面會被掀走 */
   if (!frame.src || frame.src === 'about:blank') return;
   clearTimeout(watchdog);
-  setTimeout(function(){ veil.classList.add('hide'); }, 400);
+  st.textContent = '載入資料…';
+  clearTimeout(revealTimer);
+  revealTimer = setTimeout(reveal, 1800);
   /* 稍等內層 listener 掛好再送 */
   setTimeout(function(){
     /* 送給自報家門拿到的那個視窗。還沒接上線也沒關係 ——
        famhello 進來的時候會再補送一次。 */
     try { if (gasWin) gasWin.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
   }, 300);
-  /* 等畫面穩了再問通知。一進來就跳，感覺像廣告。 */
-  setTimeout(pushGate, 2500);
 });
 go.addEventListener('click', load);
 
@@ -511,6 +537,9 @@ window.addEventListener('message', function(ev){
     }
     return;
   }
+
+  /* 內頁畫完了 */
+  if (d.t === 'famready') { reveal(); return; }
 
   if (d.t === 'famnav') {
     var p = String(d.page || '');
@@ -652,6 +681,11 @@ window.addEventListener('message', function(ev){
   if (!d) return;
   if (d.t === 'famhello') {
     gasWin = ev.source;
+    /* 抽屜在 → 這頁一定會送 famready，等它。內頁自己也有 10 秒保險絲。 */
+    if (!revealed) {
+      clearTimeout(revealTimer);
+      revealTimer = setTimeout(reveal, 12000);
+    }
     try { gasWin.postMessage({ t:'famhi' }, '*'); } catch(e){}
     try { gasWin.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
     return;
