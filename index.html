@@ -103,7 +103,10 @@
     width:100%;height:100%;
     object-fit:cover;
     object-position:center center;
-    background:#070507;
+    /* 🔴 不能有底色。video 自己的背景是不透明的，會把 #veil 鋪在下面的
+       靜圖整個蓋掉 —— 影片沒播出來的時候就是一片黑。
+       2026-09-16：這是「備援圖從來沒生效過」的真正原因。 */
+    background:transparent;
     pointer-events:none;
   }
 
