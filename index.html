@@ -482,6 +482,20 @@ window.addEventListener('message', function(ev){
   var d = ev.data;
   if (!d) return;
 
+  /* iPhone PWA 底部 safe-area 其實是外殼的區域。
+     內頁回報自己的背景色，外殼同步後就不再露黑底。 */
+  if (d.t === 'fambg') {
+    var c = String(d.color || '').trim();
+    if (/^(#[0-9a-f]{3,8}|rgba?\([^)]*\))$/i.test(c)) {
+      document.documentElement.style.backgroundColor = c;
+      document.body.style.backgroundColor = c;
+      frame.style.backgroundColor = c;
+      var mt = document.querySelector('meta[name=\"theme-color\"]');
+      if (mt) mt.setAttribute('content', c);
+    }
+    return;
+  }
+
   if (d.t === 'famnav') {
     var p = String(d.page || '');
     history.replaceState(null, '', p ? ('?page=' + encodeURIComponent(p)) : location.pathname);
