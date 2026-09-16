@@ -34,326 +34,319 @@
 <link rel="icon" href="assets/icons/app/favicon.ico" sizes="any">
 
 <style>
-  @font-face{font-family:'FF';src:url('FF-caps.woff2') format('woff2');
-    unicode-range:U+0041-005A;font-display:swap}
-  @font-face{font-family:'FF';src:url('FF-body.woff2') format('woff2');
-    unicode-range:U+0020-0023,U+0025-0040,U+005B-007E;font-display:swap}
+@font-face{font-family:'FF';src:url('FF-caps.woff2') format('woff2');
+unicode-range:U+0041-005A;font-display:swap}
+@font-face{font-family:'FF';src:url('FF-body.woff2') format('woff2');
+unicode-range:U+0020-0023,U+0025-0040,U+005B-007E;font-display:swap}
 
-  *{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0}
 
-  /* iPhone / PWA viewport 修正
-     原本 fixed + inset:0 又疊 width/height:100%，
-     iOS standalone 有機會把 iframe 算成較短的 layout viewport，
-     底下就會露出外殼黑底。改用 dynamic viewport 高度覆蓋。 */
-  html,body{
-    width:100%;
-    height:100%;
-    min-height:100%;
-    overflow:hidden;
-    background:#080B12;
-  }
-    background:#00FF00;
-  }
-  body{background:#00FF00;color:#E6E2D6;
+/* iPhone / PWA viewport 修正
+    原本 fixed + inset:0 又疊 width/height:100%，
+    iOS standalone 有機會把 iframe 算成較短的 layout viewport，
+    底下就會露出外殼黑底。改用 dynamic viewport 高度覆蓋。 */
+html,body{
+width:100%;
+height:100%;
+min-height:100%;
+overflow:hidden;
+background:#080B12;
+}
+body{background:#080B12;color:#E6E2D6;
+font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif}
 
-  #frame{
-    position:fixed;
-    top:0;
-    left:0;
-    width:100vw;
+#frame{
+position:fixed;
+top:0;
+left:0;
+width:100vw;
 
-    /* 桌機 / 舊 Safari fallback */
-    height:100vh;
+/* 桌機 / 舊 Safari fallback */
+height:100vh;
 
-<<<<<<< HEAD
-    /* iPhone PWA：iframe 就做滿可視高度，不要再額外加 safe-area。
-       多加的那一段會變成外殼跟內頁對不上的一條，反而更明顯。
-       底下那 34px 本來就歸外殼漆，靠內頁回報底色（fambg）同步。 */
-    height:100dvh;
-=======
-    /* iPhone PWA：
-       100dvh 只到可視內容區底部，Home Indicator 的 safe-area
-       可能另外留在下面，所以把那一段補回 iframe 高度。
-       桌機 env(...) = 0，不會影響桌機。 */
+/* iPhone PWA：
+      100dvh 只到可視內容區底部，Home Indicator 的 safe-area
+      可能另外留在下面，所以把那一段補回 iframe 高度。
+      桌機 env(...) = 0，不會影響桌機。 */
+    height:calc(100dvh + env(safe-area-inset-bottom, 0px));
         height:100dvh;
->>>>>>> b1858790f3d5e14d0ec2a1b0c0446c3b3b341407
 
-    border:0;
-    display:block;
-    background:#FF00FF;
-  }
+border:0;
+display:block;
+background:#080B12;
+}
 
-  /* ── Black Glass Video Splash ─────────────────────── */
-  #veil{
-    position:fixed;inset:0;z-index:10;
-    display:flex;align-items:center;justify-content:center;
-    overflow:hidden;
-    /* 靜圖鋪在最底下，影片蓋在上面。
-       這兩張就是各自 mp4 的「第一幀」，所以影片接上來的瞬間看不出接縫，
-       影片沒接上（太慢／掛了／自動播放被擋）也不會出現黑畫面。
-       直式／橫式用 media query 切 —— 條件跟下面 JS 選影片的那條一模一樣，
-       而且瀏覽器只會下載「符合條件的那一張」，不會兩張都抓。
-       （2026-09-16 換掉 loading-bg.webp：那張是另一張圖，而且是橫的，
-         手機直式螢幕上左右被裁掉一大半。）*/
-    background:#070507 url('assets/splash/loading-desktop.webp') center/cover no-repeat;
-    transition:opacity .55s ease
-  }
-  #veil.hide{opacity:0;pointer-events:none}
+/* ── Black Glass Video Splash ─────────────────────── */
+#veil{
+position:fixed;inset:0;z-index:10;
+display:flex;align-items:center;justify-content:center;
+overflow:hidden;
+/* 靜圖鋪在最底下，影片蓋在上面。
+      這兩張就是各自 mp4 的「第一幀」，所以影片接上來的瞬間看不出接縫，
+      影片沒接上（太慢／掛了／自動播放被擋）也不會出現黑畫面。
+      直式／橫式用 media query 切 —— 條件跟下面 JS 選影片的那條一模一樣，
+      而且瀏覽器只會下載「符合條件的那一張」，不會兩張都抓。
+      （2026-09-16 換掉 loading-bg.webp：那張是另一張圖，而且是橫的，
+        手機直式螢幕上左右被裁掉一大半。）*/
+background:#070507 url('assets/splash/loading-desktop.webp') center/cover no-repeat;
+transition:opacity .55s ease
+}
+#veil.hide{opacity:0;pointer-events:none}
 
-  /* 手機直式換成直式那張。條件要跟 JS 的 mqMobile 一致，不然圖跟影片會不同張 */
-  @media (max-width:700px) and (orientation:portrait){
-    #veil{background-image:url('assets/splash/loading-mobile.webp')}
-  }
+/* 手機直式換成直式那張。條件要跟 JS 的 mqMobile 一致，不然圖跟影片會不同張 */
+@media (max-width:700px) and (orientation:portrait){
+#veil{background-image:url('assets/splash/loading-mobile.webp')}
+}
 
-  /* 桌機 / 手機會由 JS 自動選不同影片 */
-  #splashVideo{
-    position:absolute;inset:0;z-index:0;
-    width:100%;height:100%;
-    object-fit:cover;
-    object-position:center center;
-    /* 🔴 不能有底色。video 自己的背景是不透明的，會把 #veil 鋪在下面的
-       靜圖整個蓋掉 —— 影片沒播出來的時候就是一片黑。
-       2026-09-16：這是「備援圖從來沒生效過」的真正原因。 */
-    background:transparent;
-    pointer-events:none;
-  }
+/* 桌機 / 手機會由 JS 自動選不同影片 */
+#splashVideo{
+position:absolute;inset:0;z-index:0;
+width:100%;height:100%;
+object-fit:cover;
+object-position:center center;
+/* 🔴 不能有底色。video 自己的背景是不透明的，會把 #veil 鋪在下面的
+      靜圖整個蓋掉 —— 影片沒播出來的時候就是一片黑。
+      2026-09-16：這是「備援圖從來沒生效過」的真正原因。 */
+background:transparent;
+pointer-events:none;
+}
 
-  /* 讓中央 HTML 文字維持清楚，但不再用大玻璃卡蓋住影片 */
-  #veil::after{
-    content:'';
-    position:absolute;inset:0;z-index:1;pointer-events:none;
-    background:
-      radial-gradient(circle at 50% 48%,
-        rgba(4,3,6,.03) 0%,
-        rgba(4,3,6,.05) 25%,
-        rgba(3,2,5,.18) 65%,
-        rgba(2,2,3,.34) 100%);
-  }
+/* 讓中央 HTML 文字維持清楚，但不再用大玻璃卡蓋住影片 */
+#veil::after{
+content:'';
+position:absolute;inset:0;z-index:1;pointer-events:none;
+background:
+radial-gradient(circle at 50% 48%,
+rgba(4,3,6,.03) 0%,
+rgba(4,3,6,.05) 25%,
+rgba(3,2,5,.18) 65%,
+rgba(2,2,3,.34) 100%);
+}
 
-  /* 少量前景光塵 */
-  #motes{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}
-  .m{
-    position:absolute;bottom:-24px;border-radius:50%;opacity:0;
-    filter:blur(.15px);
-    animation:drift linear infinite
-  }
-  @keyframes drift{
-    0%{transform:translate3d(0,0,0) scale(.45);opacity:0}
-    12%{opacity:.42}
-    55%{transform:translate3d(14px,-52vh,0) scale(1);opacity:.62}
-    88%{opacity:.26}
-    100%{transform:translate3d(-10px,-105vh,0) scale(.55);opacity:0}
-  }
+/* 少量前景光塵 */
+#motes{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:2}
+.m{
+position:absolute;bottom:-24px;border-radius:50%;opacity:0;
+filter:blur(.15px);
+animation:drift linear infinite
+}
+@keyframes drift{
+0%{transform:translate3d(0,0,0) scale(.45);opacity:0}
+12%{opacity:.42}
+55%{transform:translate3d(14px,-52vh,0) scale(1);opacity:.62}
+88%{opacity:.26}
+100%{transform:translate3d(-10px,-105vh,0) scale(.55);opacity:0}
+}
 
-  /* 影片本身已經有紅／金／紫讀條，所以中央區只疊 UI，不再模糊背景 */
-  .box{
-    position:relative;z-index:3;text-align:center;
-    width:min(430px,calc(100vw - 44px));
-    padding:20px 28px 18px;
-    border:0;border-radius:0;
-    background:transparent;
-    box-shadow:none;
-    backdrop-filter:none;
-    -webkit-backdrop-filter:none;
-    overflow:visible;
-  }
-  .box::after{display:none}
+/* 影片本身已經有紅／金／紫讀條，所以中央區只疊 UI，不再模糊背景 */
+.box{
+position:relative;z-index:3;text-align:center;
+width:min(430px,calc(100vw - 44px));
+padding:20px 28px 18px;
+border:0;border-radius:0;
+background:transparent;
+box-shadow:none;
+backdrop-filter:none;
+-webkit-backdrop-filter:none;
+overflow:visible;
+}
+.box::after{display:none}
 
-  .crest{
-    width:104px;height:104px;margin:0 auto 24px;position:relative;
-    animation:crestFloat 3.8s ease-in-out infinite
-  }
-  .crest::before{
-    content:'';position:absolute;inset:-14px;border-radius:28px;
-    background:radial-gradient(circle,
-      rgba(228,184,101,.20),
-      rgba(192,50,68,.07) 43%,
-      rgba(139,92,205,.05) 58%,
-      transparent 72%);
-    filter:blur(7px);
-    animation:auraPulse 3.8s ease-in-out infinite
-  }
-  .crest img{
-    position:relative;width:100%;height:100%;
-    border-radius:22px;
-    box-shadow:0 12px 34px rgba(0,0,0,.34),0 0 24px rgba(225,181,96,.17)
-  }
-  @keyframes crestFloat{
-    0%,100%{transform:translateY(0) scale(1)}
-    50%{transform:translateY(-5px) scale(1.025)}
-  }
-  @keyframes auraPulse{
-    0%,100%{opacity:.62;transform:scale(.96)}
-    50%{opacity:1;transform:scale(1.06)}
-  }
+.crest{
+width:104px;height:104px;margin:0 auto 24px;position:relative;
+animation:crestFloat 3.8s ease-in-out infinite
+}
+.crest::before{
+content:'';position:absolute;inset:-14px;border-radius:28px;
+background:radial-gradient(circle,
+rgba(228,184,101,.20),
+rgba(192,50,68,.07) 43%,
+rgba(139,92,205,.05) 58%,
+transparent 72%);
+filter:blur(7px);
+animation:auraPulse 3.8s ease-in-out infinite
+}
+.crest img{
+position:relative;width:100%;height:100%;
+border-radius:22px;
+box-shadow:0 12px 34px rgba(0,0,0,.34),0 0 24px rgba(225,181,96,.17)
+}
+@keyframes crestFloat{
+0%,100%{transform:translateY(0) scale(1)}
+50%{transform:translateY(-5px) scale(1.025)}
+}
+@keyframes auraPulse{
+0%,100%{opacity:.62;transform:scale(.96)}
+50%{opacity:1;transform:scale(1.06)}
+}
 
-  .en{
-    font-family:'FF',serif;font-size:15px;letter-spacing:7px;
-    color:#C7A660;text-shadow:0 0 18px rgba(217,186,107,.12)
-  }
-  .cn{
-    font-family:'FF',serif;font-size:50px;color:#F4DDA6;letter-spacing:4px;
-    margin-top:8px;line-height:1.05;-webkit-font-smoothing:antialiased;
-    text-shadow:0 0 24px rgba(217,186,107,.24)
-  }
-  .zh{
-    font-size:18px;letter-spacing:5px;color:#E9E0D8;
-    margin-top:9px;font-weight:600
-  }
+.en{
+font-family:'FF',serif;font-size:15px;letter-spacing:7px;
+color:#C7A660;text-shadow:0 0 18px rgba(217,186,107,.12)
+}
+.cn{
+font-family:'FF',serif;font-size:50px;color:#F4DDA6;letter-spacing:4px;
+margin-top:8px;line-height:1.05;-webkit-font-smoothing:antialiased;
+text-shadow:0 0 24px rgba(217,186,107,.24)
+}
+.zh{
+font-size:18px;letter-spacing:5px;color:#E9E0D8;
+margin-top:9px;font-weight:600
+}
 
-  /*
-    FLOW 影片已包含讀條。
-    這顆 HTML .bar 保留占位，因為原程式 load()/watchdog 仍會操作它；
-    正常影片時隱藏，影片載入失敗才顯示 CSS 備援讀條。
-  */
-  .bar{
-    width:min(238px,72vw);height:9px;margin:31px auto 0;
-    position:relative;overflow:hidden;border-radius:999px;
-    border:1px solid rgba(246,224,180,.18);
-    background:rgba(4,3,6,.52);
-    box-shadow:inset 0 1px 2px rgba(255,255,255,.05),0 0 20px rgba(0,0,0,.20);
-    visibility:hidden;
-  }
-  body.splash-video-failed .bar{visibility:visible}
+/*
+   FLOW 影片已包含讀條。
+   這顆 HTML .bar 保留占位，因為原程式 load()/watchdog 仍會操作它；
+   正常影片時隱藏，影片載入失敗才顯示 CSS 備援讀條。
+ */
+.bar{
+width:min(238px,72vw);height:9px;margin:31px auto 0;
+position:relative;overflow:hidden;border-radius:999px;
+border:1px solid rgba(246,224,180,.18);
+background:rgba(4,3,6,.52);
+box-shadow:inset 0 1px 2px rgba(255,255,255,.05),0 0 20px rgba(0,0,0,.20);
+visibility:hidden;
+}
+body.splash-video-failed .bar{visibility:visible}
 
-  .bar::before{
-    content:'';position:absolute;inset:1px;border-radius:999px;
-    background:linear-gradient(90deg,
-      rgba(215,63,68,.30) 0%,
-      rgba(204,55,71,.12) 28%,
-      rgba(228,190,112,.08) 50%,
-      rgba(150,95,219,.12) 72%,
-      rgba(152,94,216,.30) 100%);
-    animation:barBreath 2.4s ease-in-out infinite
-  }
-  .bar::after{
-    content:'';position:absolute;top:50%;left:50%;
-    width:8px;height:8px;border-radius:50%;
-    background:#FFE8A9;
-    box-shadow:0 0 7px #FFD87B,0 0 17px rgba(255,201,104,.72);
-    transform:translate(-50%,-50%) scale(.8);
-    animation:centerPulse 1.8s ease-in-out infinite
-  }
-  .bar i{
-    position:absolute;top:1px;bottom:1px;left:-34%;
-    width:34%;border-radius:999px;
-    background:linear-gradient(90deg,
-      transparent,
-      rgba(220,65,73,.70) 25%,
-      rgba(244,194,104,.98) 55%,
-      rgba(164,103,225,.76) 82%,
-      transparent);
-    box-shadow:0 0 12px rgba(231,188,102,.36);
-    animation:glassLoad 1.75s cubic-bezier(.45,.05,.55,.95) infinite
-  }
-  @keyframes glassLoad{
-    0%{transform:translateX(0);opacity:.15}
-    15%{opacity:1}
-    85%{opacity:1}
-    100%{transform:translateX(690%);opacity:.15}
-  }
-  @keyframes barBreath{
-    0%,100%{opacity:.58}
-    50%{opacity:1}
-  }
-  @keyframes centerPulse{
-    0%,100%{transform:translate(-50%,-50%) scale(.72);opacity:.62}
-    50%{transform:translate(-50%,-50%) scale(1.18);opacity:1}
-  }
+.bar::before{
+content:'';position:absolute;inset:1px;border-radius:999px;
+background:linear-gradient(90deg,
+rgba(215,63,68,.30) 0%,
+rgba(204,55,71,.12) 28%,
+rgba(228,190,112,.08) 50%,
+rgba(150,95,219,.12) 72%,
+rgba(152,94,216,.30) 100%);
+animation:barBreath 2.4s ease-in-out infinite
+}
+.bar::after{
+content:'';position:absolute;top:50%;left:50%;
+width:8px;height:8px;border-radius:50%;
+background:#FFE8A9;
+box-shadow:0 0 7px #FFD87B,0 0 17px rgba(255,201,104,.72);
+transform:translate(-50%,-50%) scale(.8);
+animation:centerPulse 1.8s ease-in-out infinite
+}
+.bar i{
+position:absolute;top:1px;bottom:1px;left:-34%;
+width:34%;border-radius:999px;
+background:linear-gradient(90deg,
+transparent,
+rgba(220,65,73,.70) 25%,
+rgba(244,194,104,.98) 55%,
+rgba(164,103,225,.76) 82%,
+transparent);
+box-shadow:0 0 12px rgba(231,188,102,.36);
+animation:glassLoad 1.75s cubic-bezier(.45,.05,.55,.95) infinite
+}
+@keyframes glassLoad{
+0%{transform:translateX(0);opacity:.15}
+15%{opacity:1}
+85%{opacity:1}
+100%{transform:translateX(690%);opacity:.15}
+}
+@keyframes barBreath{
+0%,100%{opacity:.58}
+50%{opacity:1}
+}
+@keyframes centerPulse{
+0%,100%{transform:translate(-50%,-50%) scale(.72);opacity:.62}
+50%{transform:translate(-50%,-50%) scale(1.18);opacity:1}
+}
 
-  .st{
-    margin-top:15px;font-size:12px;color:#B8A9A8;
-    font-weight:700;letter-spacing:2px;
-    text-shadow:0 2px 10px rgba(0,0,0,.78)
-  }
+.st{
+margin-top:15px;font-size:12px;color:#B8A9A8;
+font-weight:700;letter-spacing:2px;
+text-shadow:0 2px 10px rgba(0,0,0,.78)
+}
 
-  /* 真正的手機直式影片，直接吃 9:16，不再裁橫圖 */
-  @media(max-width:700px) and (orientation:portrait){
-    #splashVideo{
-      object-fit:cover;
-      object-position:center center;
-    }
-    .box{
-      width:min(388px,calc(100vw - 26px));
-      padding:18px 20px 16px;
-    }
-    .crest{width:92px;height:92px;margin-bottom:20px}
-    .cn{font-size:43px}
-    .en{font-size:13px;letter-spacing:5.5px}
-    .zh{font-size:16px}
-  }
+/* 真正的手機直式影片，直接吃 9:16，不再裁橫圖 */
+@media(max-width:700px) and (orientation:portrait){
+#splashVideo{
+object-fit:cover;
+object-position:center center;
+}
+.box{
+width:min(388px,calc(100vw - 26px));
+padding:18px 20px 16px;
+}
+.crest{width:92px;height:92px;margin-bottom:20px}
+.cn{font-size:43px}
+.en{font-size:13px;letter-spacing:5.5px}
+.zh{font-size:16px}
+}
 
-  @media(prefers-reduced-motion:reduce){
-    .m,.crest,.crest::before,.bar::before,.bar::after,.bar i{
-      animation:none!important
-    }
-  }
-  .go{display:none;margin:24px auto 0;padding:15px 42px;cursor:pointer;
-    background:linear-gradient(180deg,#2A3450,#141C2C);color:#F3DFA3;
-    border:1px solid #6E5C2E;font-family:'FF',serif;font-size:22px;font-weight:400;
-    letter-spacing:8px;text-indent:8px;-webkit-font-smoothing:antialiased}
-  .go:hover{border-color:#D9BA6B;box-shadow:0 0 16px rgba(217,186,107,.35)}
+@media(prefers-reduced-motion:reduce){
+.m,.crest,.crest::before,.bar::before,.bar::after,.bar i{
+animation:none!important
+}
+}
+.go{display:none;margin:24px auto 0;padding:15px 42px;cursor:pointer;
+background:linear-gradient(180deg,#2A3450,#141C2C);color:#F3DFA3;
+border:1px solid #6E5C2E;font-family:'FF',serif;font-size:22px;font-weight:400;
+letter-spacing:8px;text-indent:8px;-webkit-font-smoothing:antialiased}
+.go:hover{border-color:#D9BA6B;box-shadow:0 0 16px rgba(217,186,107,.35)}
 
-  #pin{display:none;margin-top:26px}
-  #pin input{width:180px;padding:13px;text-align:center;letter-spacing:10px;
-    font-size:22px;background:#0E1420;border:1px solid #2A3450;color:#F3DFA3;
-    border-radius:6px;outline:none}
-  #pin input:focus{border-color:#D9BA6B}
-  #pinMsg{margin-top:12px;font-size:12px;color:#C24A6D;min-height:16px}
+#pin{display:none;margin-top:26px}
+#pin input{width:180px;padding:13px;text-align:center;letter-spacing:10px;
+font-size:22px;background:#0E1420;border:1px solid #2A3450;color:#F3DFA3;
+border-radius:6px;outline:none}
+#pin input:focus{border-color:#D9BA6B}
+#pinMsg{margin-top:12px;font-size:12px;color:#C24A6D;min-height:16px}
 
-  /* 通知邀請卡。浮在 iframe 上面，不佔版面。
-     bottom 要加 safe-area，不然 iPhone 會被下面那條橫槓壓到。 */
-  #npc{display:none;position:fixed;z-index:20;left:12px;right:12px;
-    max-width:440px;margin-left:auto;
-    bottom:calc(12px + env(safe-area-inset-bottom,0px));
-    background:#111827;border:1px solid #2A3450;border-radius:14px;
-    padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.55)}
-  #npc b{display:block;font-size:15px;color:#F3DFA3;letter-spacing:1px}
-  #npc p{margin-top:5px;font-size:12.5px;line-height:1.6;color:#9AA3B2}
-  #npc .r{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
-  #npc button{font:600 14px/1 inherit;padding:11px 18px;border-radius:9px;
-    cursor:pointer;border:1px solid #2A3450;background:#0E1420;color:#9AA3B2}
-  #npc button.y{background:linear-gradient(180deg,#2A3450,#141C2C);
-    border-color:#6E5C2E;color:#F3DFA3}
-  /* 手機上看不到 console，所以每一步的結果一定要印在畫面上 */
-  #npcMsg{margin-top:9px;font-size:11.5px;line-height:1.55;color:#7E8798;
-    word-break:break-all;white-space:pre-wrap}
-  #npcMsg.bad{color:#E0778E}
-  #npcMsg.good{color:#7FBE8B}
+/* 通知邀請卡。浮在 iframe 上面，不佔版面。
+    bottom 要加 safe-area，不然 iPhone 會被下面那條橫槓壓到。 */
+#npc{display:none;position:fixed;z-index:20;left:12px;right:12px;
+max-width:440px;margin-left:auto;
+bottom:calc(12px + env(safe-area-inset-bottom,0px));
+background:#111827;border:1px solid #2A3450;border-radius:14px;
+padding:14px 16px;box-shadow:0 10px 30px rgba(0,0,0,.55)}
+#npc b{display:block;font-size:15px;color:#F3DFA3;letter-spacing:1px}
+#npc p{margin-top:5px;font-size:12.5px;line-height:1.6;color:#9AA3B2}
+#npc .r{display:flex;gap:8px;margin-top:12px;justify-content:flex-end}
+#npc button{font:600 14px/1 inherit;padding:11px 18px;border-radius:9px;
+cursor:pointer;border:1px solid #2A3450;background:#0E1420;color:#9AA3B2}
+#npc button.y{background:linear-gradient(180deg,#2A3450,#141C2C);
+border-color:#6E5C2E;color:#F3DFA3}
+/* 手機上看不到 console，所以每一步的結果一定要印在畫面上 */
+#npcMsg{margin-top:9px;font-size:11.5px;line-height:1.55;color:#7E8798;
+word-break:break-all;white-space:pre-wrap}
+#npcMsg.bad{color:#E0778E}
+#npcMsg.good{color:#7FBE8B}
 </style>
 </head>
 <body>
 <iframe id="frame" title="家菜金"
-        referrerpolicy="no-referrer-when-downgrade"
-        allow="clipboard-write"></iframe>
+referrerpolicy="no-referrer-when-downgrade"
+allow="clipboard-write"></iframe>
 
 <div id="veil">
 <video id="splashVideo" autoplay muted loop playsinline webkit-playsinline preload="auto" aria-hidden="true"></video>
 <div id="motes"></div>
 
 <div class="box">
-  <div class="crest"><img src="assets/icons/app/icon-512.png" alt=""></div>
-  <div class="en">HOUSEHOLD LEDGER</div>
-  <div class="cn">FAMILIA</div>
-  <div class="zh">家 菜 金</div>
-  <div class="bar"><i></i></div>
-  <div class="st" id="st">連線中…</div>
-  <button class="go" id="go">RETRY</button>
-  <div id="pin">
-    <input id="pinIn" type="tel" maxlength="4" inputmode="numeric" placeholder="○○○○">
-    <div id="pinMsg"></div>
-  </div>
+<div class="crest"><img src="assets/icons/app/icon-512.png" alt=""></div>
+<div class="en">HOUSEHOLD LEDGER</div>
+<div class="cn">FAMILIA</div>
+<div class="zh">家 菜 金</div>
+<div class="bar"><i></i></div>
+<div class="st" id="st">連線中…</div>
+<button class="go" id="go">RETRY</button>
+<div id="pin">
+<input id="pinIn" type="tel" maxlength="4" inputmode="numeric" placeholder="○○○○">
+<div id="pinMsg"></div>
+</div>
 </div>
 </div>
 
 <div id="npc">
-  <b id="npcT">開啟通知</b>
-  <p id="npcP">對帳日、匯款單、每月固定該扣款了 —— 讓家菜金主動提醒你，不用自己記得打開。</p>
-  <div id="npcMsg"></div>
-  <div class="r">
-    <button id="npcNo">稍後再說</button>
-    <button id="npcYes" class="y">開啟</button>
-  </div>
+<b id="npcT">開啟通知</b>
+<p id="npcP">對帳日、匯款單、每月固定該扣款了 —— 讓家菜金主動提醒你，不用自己記得打開。</p>
+<div id="npcMsg"></div>
+<div class="r">
+<button id="npcNo">稍後再說</button>
+<button id="npcYes" class="y">開啟</button>
+</div>
 </div>
 
 <script>
@@ -362,89 +355,89 @@ var APP = 'https://script.google.com/macros/s/AKfycby4EFTw-rAUK0T4yZLPm-Y0qEIhdM
 
 /* ── Loading 影片：手機直式 / 其他裝置自動切換 ── */
 (function(){
-  var v = document.getElementById('splashVideo');
-  if (!v) return;
+var v = document.getElementById('splashVideo');
+if (!v) return;
 
-  var mqMobile = window.matchMedia('(max-width:700px) and (orientation:portrait)');
-  var current = '';
+var mqMobile = window.matchMedia('(max-width:700px) and (orientation:portrait)');
+var current = '';
 
-  function wanted(){
-    return mqMobile.matches
-      ? 'assets/splash/loading-mobile.mp4'
-      : 'assets/splash/loading-desktop.mp4';
-  }
+function wanted(){
+return mqMobile.matches
+? 'assets/splash/loading-mobile.mp4'
+: 'assets/splash/loading-desktop.mp4';
+}
 
-  function useRightVideo(){
-    var src = wanted();
-    if (src === current) return;
-    current = src;
+function useRightVideo(){
+var src = wanted();
+if (src === current) return;
+current = src;
 
-    document.body.classList.remove('splash-video-failed');
+document.body.classList.remove('splash-video-failed');
 
-    try {
-      v.pause();
-      v.removeAttribute('src');
-      while (v.firstChild) v.removeChild(v.firstChild);
-      v.load();
+try {
+v.pause();
+v.removeAttribute('src');
+while (v.firstChild) v.removeChild(v.firstChild);
+v.load();
 
-      v.muted = true;
-      v.defaultMuted = true;
-      v.playsInline = true;
-      v.src = src;
-      v.load();
+v.muted = true;
+v.defaultMuted = true;
+v.playsInline = true;
+v.src = src;
+v.load();
 
-      var p = v.play();
-      if (p && typeof p.catch === 'function') {
-        p.catch(function(){
-          /* muted autoplay 若仍被瀏覽器擋，底下的靜圖會頂著 */
-        });
-      }
-    } catch(e) {
-      document.body.classList.add('splash-video-failed');
-    }
-  }
+var p = v.play();
+if (p && typeof p.catch === 'function') {
+p.catch(function(){
+/* muted autoplay 若仍被瀏覽器擋，底下的靜圖會頂著 */
+});
+}
+} catch(e) {
+document.body.classList.add('splash-video-failed');
+}
+}
 
-  v.addEventListener('loadeddata', function(){
-    document.body.classList.remove('splash-video-failed');
-  });
+v.addEventListener('loadeddata', function(){
+document.body.classList.remove('splash-video-failed');
+});
 
-  /* 影片掛了：把進度條叫出來。底下的靜圖本來就在，不用再做事。 */
-  v.addEventListener('error', function(){
-    document.body.classList.add('splash-video-failed');
-  });
+/* 影片掛了：把進度條叫出來。底下的靜圖本來就在，不用再做事。 */
+v.addEventListener('error', function(){
+document.body.classList.add('splash-video-failed');
+});
 
-  if (mqMobile.addEventListener) {
-    mqMobile.addEventListener('change', useRightVideo);
-  } else if (mqMobile.addListener) {
-    mqMobile.addListener(useRightVideo);
-  }
+if (mqMobile.addEventListener) {
+mqMobile.addEventListener('change', useRightVideo);
+} else if (mqMobile.addListener) {
+mqMobile.addListener(useRightVideo);
+}
 
-  window.addEventListener('orientationchange', function(){
-    setTimeout(useRightVideo, 120);
-  });
+window.addEventListener('orientationchange', function(){
+setTimeout(useRightVideo, 120);
+});
 
-  useRightVideo();
+useRightVideo();
 })();
 
 /* 光點 */
 (function(){
-  var c = ['rgba(213,62,70,.78)','rgba(229,188,101,.82)','rgba(157,101,219,.76)'], h = '';
-  for (var i = 0; i < 20; i++) {
-    var s = 1.5 + Math.random() * 3.5;
-    h += '<span class="m" style="left:' + (Math.random()*100).toFixed(1) + '%;' +
-      'width:' + s.toFixed(1) + 'px;height:' + s.toFixed(1) + 'px;background:' + c[i%3] +
-      ';box-shadow:0 0 ' + (5+s*2).toFixed(0) + 'px ' + c[i%3] +
-      ';animation-duration:' + (16+Math.random()*20).toFixed(1) + 's;' +
-      'animation-delay:-' + (Math.random()*30).toFixed(1) + 's;"></span>';
-  }
-  document.getElementById('motes').innerHTML = h;
+var c = ['rgba(213,62,70,.78)','rgba(229,188,101,.82)','rgba(157,101,219,.76)'], h = '';
+for (var i = 0; i < 20; i++) {
+var s = 1.5 + Math.random() * 3.5;
+h += '<span class="m" style="left:' + (Math.random()*100).toFixed(1) + '%;' +
+'width:' + s.toFixed(1) + 'px;height:' + s.toFixed(1) + 'px;background:' + c[i%3] +
+';box-shadow:0 0 ' + (5+s*2).toFixed(0) + 'px ' + c[i%3] +
+';animation-duration:' + (16+Math.random()*20).toFixed(1) + 's;' +
+'animation-delay:-' + (Math.random()*30).toFixed(1) + 's;"></span>';
+}
+document.getElementById('motes').innerHTML = h;
 })();
 
 /* Service Worker（坑C：一定要 update） */
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js')
-    .then(function(reg){ reg.update(); })
-    .catch(function(){});
+navigator.serviceWorker.register('sw.js')
+.then(function(reg){ reg.update(); })
+.catch(function(){});
 }
 
 var frame = document.getElementById('frame');
@@ -455,119 +448,116 @@ var bar   = document.querySelector('.bar');
 var watchdog = null;
 
 function load(){
-  revealed = false;
-  clearTimeout(revealTimer);
-  veil.classList.remove('hide');
-  bar.style.display = '';
-  go.style.display  = 'none';
-  st.textContent    = '連線中…';
-  clearTimeout(watchdog);
-  watchdog = setTimeout(function(){
-    st.textContent   = '連線逾時，請按 RETRY';
-    bar.style.display = 'none';
-    go.style.display  = 'block';
-  }, 12000);
+revealed = false;
+clearTimeout(revealTimer);
+veil.classList.remove('hide');
+bar.style.display = '';
+go.style.display  = 'none';
+st.textContent    = '連線中…';
+clearTimeout(watchdog);
+watchdog = setTimeout(function(){
+st.textContent   = '連線逾時，請按 RETRY';
+bar.style.display = 'none';
+go.style.display  = 'block';
+}, 12000);
 
-  /* 外層參數原封不動帶進 iframe，再加上身分 token */
-  var qs = location.search.replace(/^\?/, '');
-  var tk = localStorage.getItem('FAM_TK') || '';
-  if (tk) qs += (qs ? '&' : '') + 'tk=' + encodeURIComponent(tk);
-  frame.src = APP + (qs ? (APP.indexOf('?') >= 0 ? '&' : '?') + qs : '');
+/* 外層參數原封不動帶進 iframe，再加上身分 token */
+var qs = location.search.replace(/^\?/, '');
+var tk = localStorage.getItem('FAM_TK') || '';
+if (tk) qs += (qs ? '&' : '') + 'tk=' + encodeURIComponent(tk);
+frame.src = APP + (qs ? (APP.indexOf('?') >= 0 ? '&' : '?') + qs : '');
 }
 
 /* 量出瀏海高度，內層 iframe 讀不到 env()，要外面告訴它 */
 function safeTop(){
-  var d = document.createElement('div');
-  d.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top,0px)';
-  document.body.appendChild(d);
-  var h = d.offsetHeight;
-  d.remove();
-  return h;
+var d = document.createElement('div');
+d.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top,0px)';
+document.body.appendChild(d);
+var h = d.offsetHeight;
+d.remove();
+return h;
 }
 
 /* ═══ 什麼時候可以把開場掀開 ═══════════════════════════
-   2026-09-16 改。以前是 iframe 一 load 完就掀 ——
-   但那一刻頁面只是**空殼**，資料還在後端算。
-   結果就是：開場漂漂亮亮地消失，然後你看著一片空白等十秒。
+  2026-09-16 改。以前是 iframe 一 load 完就掀 ——
+  但那一刻頁面只是**空殼**，資料還在後端算。
+  結果就是：開場漂漂亮亮地消失，然後你看著一片空白等十秒。
 
-   現在分三段：
-     1. iframe load 了，但還沒聽到內頁自報家門
-        → 1.8 秒後照舊掀開（這頁大概沒有抽屜，維持舊行為，不能拖慢它）
-     2. 聽到 famhello（＝抽屜在，famReady 一定會來）
-        → 等它說「我好了」，最多 12 秒
-     3. 收到 famready → 立刻掀開
+  現在分三段：
+    1. iframe load 了，但還沒聽到內頁自報家門
+       → 1.8 秒後照舊掀開（這頁大概沒有抽屜，維持舊行為，不能拖慢它）
+    2. 聽到 famhello（＝抽屜在，famReady 一定會來）
+       → 等它說「我好了」，最多 12 秒
+    3. 收到 famready → 立刻掀開
 
-   通知邀請卡也一起移到掀開之後才跳，不然會蓋在開場上面。 */
+  通知邀請卡也一起移到掀開之後才跳，不然會蓋在開場上面。 */
 var revealTimer = null;
 var revealed    = false;
 
 function reveal(){
-  if (revealed) return;
-  revealed = true;
-  clearTimeout(revealTimer);
-  veil.classList.add('hide');
-  setTimeout(pushGate, 2000);
+if (revealed) return;
+revealed = true;
+clearTimeout(revealTimer);
+veil.classList.add('hide');
+setTimeout(pushGate, 2000);
 }
 
 frame.addEventListener('load', function(){
-  /* about:blank 也會觸發 load，要擋掉，不然 PIN 畫面會被掀走 */
-  if (!frame.src || frame.src === 'about:blank') return;
-  clearTimeout(watchdog);
-  st.textContent = '載入資料…';
-  clearTimeout(revealTimer);
-  revealTimer = setTimeout(reveal, 1800);
-  /* 稍等內層 listener 掛好再送 */
-  setTimeout(function(){
-    /* 送給自報家門拿到的那個視窗。還沒接上線也沒關係 ——
-       famhello 進來的時候會再補送一次。 */
-    try { if (gasWin) gasWin.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
-  }, 300);
+/* about:blank 也會觸發 load，要擋掉，不然 PIN 畫面會被掀走 */
+if (!frame.src || frame.src === 'about:blank') return;
+clearTimeout(watchdog);
+st.textContent = '載入資料…';
+clearTimeout(revealTimer);
+revealTimer = setTimeout(reveal, 1800);
+/* 稍等內層 listener 掛好再送 */
+setTimeout(function(){
+/* 送給自報家門拿到的那個視窗。還沒接上線也沒關係 ——
+      famhello 進來的時候會再補送一次。 */
+try { if (gasWin) gasWin.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
+}, 300);
 });
 go.addEventListener('click', load);
 
 /* 內層喊換頁 / 登出 */
 window.addEventListener('message', function(ev){
-  var o = ev.origin || '';
-  if (!/\.googleusercontent\.com$/.test(o) && o !== 'https://script.google.com') return;
-  var d = ev.data;
-  if (!d) return;
+var o = ev.origin || '';
+if (!/\.googleusercontent\.com$/.test(o) && o !== 'https://script.google.com') return;
+var d = ev.data;
+if (!d) return;
 
-  /* iPhone PWA 底部 safe-area 其實是外殼的區域。
-     內頁回報自己的背景色，外殼同步後就不再露黑底。 */
-  if (d.t === 'fambg') {
-    var c = String(d.color || '').trim();
-    if (/^(#[0-9a-f]{3,8}|rgba?\([^)]*\))$/i.test(c)) {
-      document.documentElement.style.backgroundColor = c;
-      document.body.style.backgroundColor = c;
-      frame.style.backgroundColor = c;
-      var mt = document.querySelector('meta[name=\"theme-color\"]');
-      if (mt) mt.setAttribute('content', c);
-    }
-    return;
-  }
+/* iPhone PWA 底部 safe-area 其實是外殼的區域。
+    內頁回報自己的背景色，外殼同步後就不再露黑底。 */
+if (d.t === 'fambg') {
+var c = String(d.color || '').trim();
+if (/^(#[0-9a-f]{3,8}|rgba?\([^)]*\))$/i.test(c)) {
+document.documentElement.style.backgroundColor = c;
+document.body.style.backgroundColor = c;
+frame.style.backgroundColor = c;
+var mt = document.querySelector('meta[name=\"theme-color\"]');
+if (mt) mt.setAttribute('content', c);
+}
+return;
+}
 
-<<<<<<< HEAD
-=======
-  /* 內頁畫完了 */
-  if (d.t === 'famready') { reveal(); return; }
+/* 內頁畫完了 */
+if (d.t === 'famready') { reveal(); return; }
 
->>>>>>> b1858790f3d5e14d0ec2a1b0c0446c3b3b341407
-  if (d.t === 'famnav') {
-    var p = String(d.page || '');
-    history.replaceState(null, '', p ? ('?page=' + encodeURIComponent(p)) : location.pathname);
-    load();
-  }
-  /* 只換網址不重載（月結頁切池子用） */
-  if (d.t === 'famurl') {
-    var q = String(d.page || '');
-    history.replaceState(null, '', q ? ('?page=' + encodeURIComponent(q)) : location.pathname);
-    return;
-  }
-  if (d.t === 'famlogout') {
-    localStorage.removeItem('FAM_TK');
-    frame.src = 'about:blank';
-    location.reload();
-  }
+if (d.t === 'famnav') {
+var p = String(d.page || '');
+history.replaceState(null, '', p ? ('?page=' + encodeURIComponent(p)) : location.pathname);
+load();
+}
+/* 只換網址不重載（月結頁切池子用） */
+if (d.t === 'famurl') {
+var q = String(d.page || '');
+history.replaceState(null, '', q ? ('?page=' + encodeURIComponent(q)) : location.pathname);
+return;
+}
+if (d.t === 'famlogout') {
+localStorage.removeItem('FAM_TK');
+frame.src = 'about:blank';
+location.reload();
+}
 });
 
 /* ── PIN 登入 ──────────────────────────── */
@@ -576,58 +566,58 @@ var pinIn  = document.getElementById('pinIn');
 var pinMsg = document.getElementById('pinMsg');
 
 function askPin(){
-  bar.style.display = 'none';
-  go.style.display  = 'none';
-  st.textContent    = '請輸入 PIN';
-  pinBox.style.display = 'block';
-  setTimeout(function(){ pinIn.focus(); }, 300);
+bar.style.display = 'none';
+go.style.display  = 'none';
+st.textContent    = '請輸入 PIN';
+pinBox.style.display = 'block';
+setTimeout(function(){ pinIn.focus(); }, 300);
 }
 
 pinIn.addEventListener('input', function(){
-  pinMsg.textContent = '';
-  if (pinIn.value.length !== 4) return;
+pinMsg.textContent = '';
+if (pinIn.value.length !== 4) return;
 
-  pinMsg.textContent = '驗證中…';
-  fetch(APP + '?fn=login&pin=' + encodeURIComponent(pinIn.value))
-    .then(function(r){ return r.json(); })
-    .then(function(j){
-      if (!j.ok) { pinMsg.textContent = 'PIN 不對'; pinIn.value = ''; return; }
-      localStorage.setItem('FAM_TK', j.tk);
-      pinBox.style.display = 'none';
-      load();
-    })
-    .catch(function(){ pinMsg.textContent = '連線失敗，再試一次'; pinIn.value = ''; });
+pinMsg.textContent = '驗證中…';
+fetch(APP + '?fn=login&pin=' + encodeURIComponent(pinIn.value))
+.then(function(r){ return r.json(); })
+.then(function(j){
+if (!j.ok) { pinMsg.textContent = 'PIN 不對'; pinIn.value = ''; return; }
+localStorage.setItem('FAM_TK', j.tk);
+pinBox.style.display = 'none';
+load();
+})
+.catch(function(){ pinMsg.textContent = '連線失敗，再試一次'; pinIn.value = ''; });
 });
 
 /* ── 推播訂閱 ──────────────────────────────
-   🔴 訂閱一定要在這一層做，不能在 iframe 裡面。
-      Service Worker 掛在 vladjia.github.io，訂閱只屬於這個網域；
-      iframe 裡是 googleusercontent，拿不到 registration。
+  🔴 訂閱一定要在這一層做，不能在 iframe 裡面。
+     Service Worker 掛在 vladjia.github.io，訂閱只屬於這個網域；
+     iframe 裡是 googleusercontent，拿不到 registration。
 
-   🔴 iOS 的兩個硬條件（繞不過去，不是程式寫得好就能解）：
-      1. 一定要先「加入主畫面」，Safari 分頁裡開根本沒有 PushManager
-      2. 權限一定要由手指點下去觸發，不能自動跳
-      所以才有那張卡片，而不是一進來就問。 */
+  🔴 iOS 的兩個硬條件（繞不過去，不是程式寫得好就能解）：
+     1. 一定要先「加入主畫面」，Safari 分頁裡開根本沒有 PushManager
+     2. 權限一定要由手指點下去觸發，不能自動跳
+     所以才有那張卡片，而不是一進來就問。 */
 var npc    = document.getElementById('npc');
 var PUSH_LATER_DAYS = 30;
 
 function b64key(s){
-  s = String(s).replace(/-/g,'+').replace(/_/g,'/');
-  while (s.length % 4) s += '=';
-  var raw = atob(s), a = new Uint8Array(raw.length);
-  for (var i = 0; i < raw.length; i++) a[i] = raw.charCodeAt(i);
-  return a;
+s = String(s).replace(/-/g,'+').replace(/_/g,'/');
+while (s.length % 4) s += '=';
+var raw = atob(s), a = new Uint8Array(raw.length);
+for (var i = 0; i < raw.length; i++) a[i] = raw.charCodeAt(i);
+return a;
 }
 function devName(){
-  var ua = navigator.userAgent;
-  var os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad'
-         : /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac'
-         : /Windows/.test(ua) ? 'Windows' : '其他';
-  return os + ' · ' + (navigator.language || '');
+var ua = navigator.userAgent;
+var os = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad'
+: /Android/.test(ua) ? 'Android' : /Mac/.test(ua) ? 'Mac'
+: /Windows/.test(ua) ? 'Windows' : '其他';
+return os + ' · ' + (navigator.language || '');
 }
 /* 🔴 卡片上一定要有字。
-   手機上沒有 console —— 失敗只 console.warn 等於什麼都沒說，
-   使用者只會看到「按了沒反應」，然後連重試的入口都沒有。 */
+  手機上沒有 console —— 失敗只 console.warn 等於什麼都沒說，
+  使用者只會看到「按了沒反應」，然後連重試的入口都沒有。 */
 var npcT = document.getElementById('npcT');
 var npcP = document.getElementById('npcP');
 var npcM = document.getElementById('npcMsg');
@@ -635,343 +625,266 @@ var npcY = document.getElementById('npcYes');
 var npcN = document.getElementById('npcNo');
 
 function npcShow(title, desc, msg, cls, yes){
-  npcT.textContent = title;
-  npcP.textContent = desc;
-  npcM.textContent = msg || '';
-  npcM.className = cls || '';
-  npcY.textContent = yes || '開啟';
-  npc.style.display = 'block';
+npcT.textContent = title;
+npcP.textContent = desc;
+npcM.textContent = msg || '';
+npcM.className = cls || '';
+npcY.textContent = yes || '開啟';
+npc.style.display = 'block';
 }
 function npcFail(where, err){
-  var m = (err && err.message) || String(err || '');
-  console.warn('[push] ' + where, err);
-  npcShow('通知還沒設定成功',
-          '卡在「' + where + '」這一步。按重試會整個重來一次。',
-          m.slice(0, 200), 'bad', '重試');
+var m = (err && err.message) || String(err || '');
+console.warn('[push] ' + where, err);
+npcShow('通知還沒設定成功',
+'卡在「' + where + '」這一步。按重試會整個重來一次。',
+m.slice(0, 200), 'bad', '重試');
 }
 
 /* 送訂閱給後端。
-   ⚠️ text/plain 是故意的：送 application/json 會觸發 CORS 預檢，
-      而 GAS 不回 OPTIONS，整個請求會被瀏覽器擋掉，
-      console 只會說 CORS error，完全看不出真正原因。
-   🔴 一定要看後端回什麼。以前只看 fetch 有沒有丟例外 ——
-      GAS 找不到 doPost 時會回 200 ＋ 一張錯誤頁，
-      那種情況「沒有例外」，但其實一筆都沒存進去。 */
+  ⚠️ text/plain 是故意的：送 application/json 會觸發 CORS 預檢，
+     而 GAS 不回 OPTIONS，整個請求會被瀏覽器擋掉，
+     console 只會說 CORS error，完全看不出真正原因。
+  🔴 一定要看後端回什麼。以前只看 fetch 有沒有丟例外 ——
+     GAS 找不到 doPost 時會回 200 ＋ 一張錯誤頁，
+     那種情況「沒有例外」，但其實一筆都沒存進去。 */
 /* ══ 跟 iframe 講話 ══════════════════════════
-   🔴 為什麼不直接 fetch GAS：
-      2026-09-15 凌晨，同一條 `?fn=pushkey` 連打三次拿到 HTML、逾時、404 三種結果。
-      跨網域那條路太多變數（CORS、部署存取權限、doPost 有沒有被蓋掉、
-      Google 的轉址），而且每一種壞法在 console 都長得一樣。
+  🔴 為什麼不直接 fetch GAS：
+     2026-09-15 凌晨，同一條 `?fn=pushkey` 連打三次拿到 HTML、逾時、404 三種結果。
+     跨網域那條路太多變數（CORS、部署存取權限、doPost 有沒有被蓋掉、
+     Google 的轉址），而且每一種壞法在 console 都長得一樣。
 
-      可是 iframe 裡面本來就在 GAS 的網域上，google.script.run 一直好好的
-      —— 菜菜的 App 整晚都正常，只有訂閱失敗。
-      所以改成：外殼負責產生訂閱（SW 只屬於這個網域），
-      iframe 負責跟後端講話。沒有 CORS、不碰 doPost。
+     可是 iframe 裡面本來就在 GAS 的網域上，google.script.run 一直好好的
+     —— 菜菜的 App 整晚都正常，只有訂閱失敗。
+     所以改成：外殼負責產生訂閱（SW 只屬於這個網域），
+     iframe 負責跟後端講話。沒有 CORS、不碰 doPost。
 
-   ⚠️ iframe 可能還沒載好（載入中／剛換頁），所以要重試，不能只送一次。 */
+  ⚠️ iframe 可能還沒載好（載入中／剛換頁），所以要重試，不能只送一次。 */
 var pmSeq = 0, pmWait = {};
 
 /* 🔴🔴 2026-09-15：這是「訂閱一直失敗」真正的原因。
-   GAS 的 /exec 不是直接回我們要的 HTML ——
-   script.google.com 先回一層自己的頁面，裡面再包一個
-   googleusercontent 的 iframe，App 的程式跑在那一層。
+  GAS 的 /exec 不是直接回我們要的 HTML ——
+  script.google.com 先回一層自己的頁面，裡面再包一個
+  googleusercontent 的 iframe，App 的程式跑在那一層。
 
-   所以 frame.contentWindow 是 script.google.com 那層殼，
-   往它 postMessage，訊息就停在那裡，不會往下傳。
-   App 那邊的 listener 永遠收不到，於是永遠沒有人回話 ——
-   畫面上看到的就是「App 畫面沒回應」，而且怎麼重試都一樣。
-   （famsafe 也一樣沒送到過，只是瀏海少墊一點，看不太出來。）
+  所以 frame.contentWindow 是 script.google.com 那層殼，
+  往它 postMessage，訊息就停在那裡，不會往下傳。
+  App 那邊的 listener 永遠收不到，於是永遠沒有人回話 ——
+  畫面上看到的就是「App 畫面沒回應」，而且怎麼重試都一樣。
+  （famsafe 也一樣沒送到過，只是瀏海少墊一點，看不太出來。）
 
-   往上送沒問題。所以反過來：App 一載好就自報家門（famhello），
-   我們把那個 ev.source 記下來 —— 那才是真正的「App 那一層」，
-   之後所有東西都送給它。 */
+  往上送沒問題。所以反過來：App 一載好就自報家門（famhello），
+  我們把那個 ev.source 記下來 —— 那才是真正的「App 那一層」，
+  之後所有東西都送給它。 */
 var gasWin = null;
 
 window.addEventListener('message', function(ev){
-  var d = ev.data;
-  if (!d) return;
-  if (d.t === 'famhello') {
-    gasWin = ev.source;
-    /* 抽屜在 → 這頁一定會送 famready，等它。內頁自己也有 10 秒保險絲。 */
-    if (!revealed) {
-      clearTimeout(revealTimer);
-      revealTimer = setTimeout(reveal, 12000);
-    }
-    try { gasWin.postMessage({ t:'famhi' }, '*'); } catch(e){}
-    try { gasWin.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
-    return;
-  }
-  if (d.t !== 'fampushres') return;
-  var f = pmWait[d.id];
-  if (f) { delete pmWait[d.id]; f(d.r || {}); }
+var d = ev.data;
+if (!d) return;
+if (d.t === 'famhello') {
+gasWin = ev.source;
+/* 抽屜在 → 這頁一定會送 famready，等它。內頁自己也有 10 秒保險絲。 */
+if (!revealed) {
+clearTimeout(revealTimer);
+revealTimer = setTimeout(reveal, 12000);
+}
+try { gasWin.postMessage({ t:'famhi' }, '*'); } catch(e){}
+try { gasWin.postMessage({ t:'famsafe', top: safeTop() }, '*'); } catch(e){}
+return;
+}
+if (d.t !== 'fampushres') return;
+var f = pmWait[d.id];
+if (f) { delete pmWait[d.id]; f(d.r || {}); }
 });
 
 /* 🔴 2026-09-15 改：本來是「送出去，2 秒沒回就重送，最多 4 次」。
-   那個設計有兩個問題，而且合起來讓訂閱變成看運氣：
+  那個設計有兩個問題，而且合起來讓訂閱變成看運氣：
 
-     1. google.script.run 一趟本來就常常要 3~8 秒（冷啟動更久）。
-        2 秒根本不夠，所以正常的一次呼叫也會被判逾時。
-     2. 重送不是「取消上一次再送」—— 上一次已經打到後端了。
-        apiPushSub 裡面有 LockService，四次重送會互相搶同一把鎖，
-        每一次都等前一個做完，越重試越慢，最後全部逾時。
-        更糟的是：後端其實已經存進去了，畫面卻說失敗。
+    1. google.script.run 一趟本來就常常要 3~8 秒（冷啟動更久）。
+       2 秒根本不夠，所以正常的一次呼叫也會被判逾時。
+    2. 重送不是「取消上一次再送」—— 上一次已經打到後端了。
+       apiPushSub 裡面有 LockService，四次重送會互相搶同一把鎖，
+       每一次都等前一個做完，越重試越慢，最後全部逾時。
+       更糟的是：後端其實已經存進去了，畫面卻說失敗。
 
-   現在拆成兩段：
-     ping  只問「iframe 裡的接線活著嗎」，不碰後端，所以可以短逾時＋重試
-     其他  真的要打後端，長逾時（45 秒）而且**不重試**
+  現在拆成兩段：
+    ping  只問「iframe 裡的接線活著嗎」，不碰後端，所以可以短逾時＋重試
+    其他  真的要打後端，長逾時（45 秒）而且**不重試**
 
-   分開之後，錯誤訊息也才分得出來是「畫面還沒載好」還是「Google 在忙」。 */
+  分開之後，錯誤訊息也才分得出來是「畫面還沒載好」還是「Google 在忙」。 */
 function send(act, extra, ms){
-  return new Promise(function(res, rej){
-    var id = ++pmSeq, done = false;
-    pmWait[id] = function(r){ done = true; res(r); };
-    var msg = { t:'fampush', act:act, id:id };
-    for (var k in extra) msg[k] = extra[k];
-    var w = gasWin;        /* 一定要用自報家門拿到的那個視窗，不能用 frame.contentWindow */
-    if (!w) { delete pmWait[id]; rej(new Error('App 畫面還沒跟外殼接上線')); return; }
-    try { w.postMessage(msg, '*'); }
-    catch(e){ delete pmWait[id]; rej(new Error('送不進 App 畫面：' + e.message)); return; }
-    setTimeout(function(){
-      if (done) return;
-      delete pmWait[id];
-      rej(new Error('等了 ' + Math.round(ms / 1000) +
-        ' 秒後端還沒回。Google 那邊忙的時候會這樣，等一下再按重試就好。'));
-    }, ms);
-  });
+return new Promise(function(res, rej){
+var id = ++pmSeq, done = false;
+pmWait[id] = function(r){ done = true; res(r); };
+var msg = { t:'fampush', act:act, id:id };
+for (var k in extra) msg[k] = extra[k];
+var w = gasWin;        /* 一定要用自報家門拿到的那個視窗，不能用 frame.contentWindow */
+if (!w) { delete pmWait[id]; rej(new Error('App 畫面還沒跟外殼接上線')); return; }
+try { w.postMessage(msg, '*'); }
+catch(e){ delete pmWait[id]; rej(new Error('送不進 App 畫面：' + e.message)); return; }
+setTimeout(function(){
+if (done) return;
+delete pmWait[id];
+rej(new Error('等了 ' + Math.round(ms / 1000) +
+' 秒後端還沒回。Google 那邊忙的時候會這樣，等一下再按重試就好。'));
+}, ms);
+});
 }
 
 /** 等 App 自報家門，再敲一次 ping 確認接線活著。最多約 12 秒。 */
 function alive(tries){
-  tries = tries || 0;
-  if (!gasWin) {
-    if (tries > 24) {
-      return Promise.reject(new Error(
-        'App 畫面還沒跟外殼接上線。如果現在停在輸入 PIN 那一頁，先登入進去再開通知。'));
-    }
-    return new Promise(function(r){ setTimeout(r, 500); }).then(function(){
-      return alive(tries + 1);
-    });
-  }
-  return send('ping', {}, 1200).catch(function(){
-    if (tries < 24) return alive(tries + 1);
-    throw new Error('App 畫面沒回應。試著把 App 整個關掉重開一次。');
-  });
+tries = tries || 0;
+if (!gasWin) {
+if (tries > 24) {
+return Promise.reject(new Error(
+'App 畫面還沒跟外殼接上線。如果現在停在輸入 PIN 那一頁，先登入進去再開通知。'));
+}
+return new Promise(function(r){ setTimeout(r, 500); }).then(function(){
+return alive(tries + 1);
+});
+}
+return send('ping', {}, 1200).catch(function(){
+if (tries < 24) return alive(tries + 1);
+throw new Error('App 畫面沒回應。試著把 App 整個關掉重開一次。');
+});
 }
 
 function ask(act, extra){
-  return alive().then(function(){ return send(act, extra, 45000); });
+return alive().then(function(){ return send(act, extra, 45000); });
 }
 
 function sendSub(sub){
-  if (!sub) return Promise.reject(new Error('沒有訂閱物件'));
-  return ask('sub', { sub: sub.toJSON(), device: devName() }).then(function(r){
-    if (!r || !r.ok) throw new Error((r && r.msg) || '後端沒說原因');
-    return true;
-  });
+if (!sub) return Promise.reject(new Error('沒有訂閱物件'));
+return ask('sub', { sub: sub.toJSON(), device: devName() }).then(function(r){
+if (!r || !r.ok) throw new Error((r && r.msg) || '後端沒說原因');
+return true;
+});
 }
 
 /** 已經有訂閱了，只是回報一次給後端。兩次都失敗才吵他。 */
 function renew(sub, n){
-  return sendSub(sub).catch(function(err){
-    if (n >= 1) { npcFail('存進後端', err); return; }
-    setTimeout(function(){ renew(sub, n + 1); }, 20000);
-  });
+return sendSub(sub).catch(function(err){
+if (n >= 1) { npcFail('存進後端', err); return; }
+setTimeout(function(){ renew(sub, n + 1); }, 20000);
+});
 }
 
 /** 從頭走一次：拿公鑰 → 訂閱 → 存後端。force=true 會先退掉舊訂閱。
-    🔴 每一步都把字寫到卡片上 —— 手機沒有 console，
-       不寫的話 45 秒的等待跟「當掉了」長得一模一樣。 */
+   🔴 每一步都把字寫到卡片上 —— 手機沒有 console，
+      不寫的話 45 秒的等待跟「當掉了」長得一模一樣。 */
 var pushStep = '';
 function step(where, txt){
-  pushStep = where;
-  npcM.textContent = txt; npcM.className = '';
+pushStep = where;
+npcM.textContent = txt; npcM.className = '';
 }
 function famPush(force){
-  step('啟動', '準備中…');
-  return navigator.serviceWorker.ready.then(function(reg){
-    return reg.pushManager.getSubscription().then(function(old){
-      if (!old) return null;
-      return force ? old.unsubscribe().then(function(){ return null; }) : old;
-    }).then(function(sub){
-      if (sub) return sub;
-      step('跟後端要公鑰', '跟後端要金鑰…（最久 45 秒）');
-      return ask('key', {}).then(function(j){
-        if (!j || !j.ok || !j.key) {
-          throw new Error((j && j.msg) || '拿不到公鑰（後端 PUSH_PUBLIC_KEY 沒設？）');
-        }
-        step('跟瀏覽器申請訂閱', '跟瀏覽器申請訂閱…');
-        return reg.pushManager.subscribe({
-          userVisibleOnly: true, applicationServerKey: b64key(j.key) });
-      });
-    }).then(function(sub){
-      step('存進後端', '存進後端…（最久 45 秒）');
-      return sendSub(sub);
-    });
-  }).then(function(){
-    npcShow('通知已開啟', '之後對帳日、匯款單這些我會直接提醒你。',
-            '', 'good', '好');
-    npcY.onclick = function(){ npc.style.display = 'none'; npcY.onclick = null; };
-    try { localStorage.removeItem('FAM_PUSH_LATER'); } catch(e){}
-    return true;
-  }).catch(function(err){
-    npcFail(pushStep || '存進後端', err);
-    return false;
-  });
+step('啟動', '準備中…');
+return navigator.serviceWorker.ready.then(function(reg){
+return reg.pushManager.getSubscription().then(function(old){
+if (!old) return null;
+return force ? old.unsubscribe().then(function(){ return null; }) : old;
+}).then(function(sub){
+if (sub) return sub;
+step('跟後端要公鑰', '跟後端要金鑰…（最久 45 秒）');
+return ask('key', {}).then(function(j){
+if (!j || !j.ok || !j.key) {
+throw new Error((j && j.msg) || '拿不到公鑰（後端 PUSH_PUBLIC_KEY 沒設？）');
+}
+step('跟瀏覽器申請訂閱', '跟瀏覽器申請訂閱…');
+return reg.pushManager.subscribe({
+userVisibleOnly: true, applicationServerKey: b64key(j.key) });
+});
+}).then(function(sub){
+step('存進後端', '存進後端…（最久 45 秒）');
+return sendSub(sub);
+});
+}).then(function(){
+npcShow('通知已開啟', '之後對帳日、匯款單這些我會直接提醒你。',
+'', 'good', '好');
+npcY.onclick = function(){ npc.style.display = 'none'; npcY.onclick = null; };
+try { localStorage.removeItem('FAM_PUSH_LATER'); } catch(e){}
+return true;
+}).catch(function(err){
+npcFail(pushStep || '存進後端', err);
+return false;
+});
 }
 window.famPush = famPush;      // console 裡隨時可以 famPush(true) 重來
 
 npcY.addEventListener('click', function(){
-  if (npcY.onclick) return;                 // 成功狀態的「好」由上面接手
-  npcM.textContent = '處理中…'; npcM.className = '';
-  if (Notification.permission === 'granted') { famPush(true); return; }
-  Notification.requestPermission().then(function(p){
-    if (p !== 'granted') {
-      npcShow('通知被擋住了',
-        '瀏覽器沒有給權限。要改的話去網址列左邊的鎖頭圖示 → 通知 → 允許，再回來按重試。',
-        '', 'bad', '重試');
-      return;
-    }
-    famPush(true);
-  });
+if (npcY.onclick) return;                 // 成功狀態的「好」由上面接手
+npcM.textContent = '處理中…'; npcM.className = '';
+if (Notification.permission === 'granted') { famPush(true); return; }
+Notification.requestPermission().then(function(p){
+if (p !== 'granted') {
+npcShow('通知被擋住了',
+'瀏覽器沒有給權限。要改的話去網址列左邊的鎖頭圖示 → 通知 → 允許，再回來按重試。',
+'', 'bad', '重試');
+return;
+}
+famPush(true);
+});
 });
 npcN.addEventListener('click', function(){
-  npc.style.display = 'none';
-  try { localStorage.setItem('FAM_PUSH_LATER', String(Date.now())); } catch(e){}
+npc.style.display = 'none';
+try { localStorage.setItem('FAM_PUSH_LATER', String(Date.now())); } catch(e){}
 });
 
 var pushGateDone = false;
 function pushGate(){
-  if (pushGateDone) return;
-  try {
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    if (typeof Notification === 'undefined') return;
-    if (!localStorage.getItem('FAM_TK')) return;          // 還沒登入，問了也沒用
+if (pushGateDone) return;
+try {
+if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+if (typeof Notification === 'undefined') return;
+if (!localStorage.getItem('FAM_TK')) return;          // 還沒登入，問了也沒用
 
-    var iOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
-              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    var home = (window.navigator.standalone === true) ||
-               (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
-    if (iOS && !home) return;                             // Safari 分頁訂不了
+var iOS = /iP(hone|ad|od)/.test(navigator.userAgent) ||
+(navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+var home = (window.navigator.standalone === true) ||
+(window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+if (iOS && !home) return;                             // Safari 分頁訂不了
 
-    pushGateDone = true;
+pushGateDone = true;
 
-    if (Notification.permission === 'denied') {
-      /* 擋掉了還是要講一聲，不然他會以為程式壞了 */
-      var ld = Number(localStorage.getItem('FAM_PUSH_LATER') || 0);
-      if (!ld || Date.now() - ld > PUSH_LATER_DAYS * 86400000) {
-        npcShow('通知被瀏覽器擋住了',
-          '網址列左邊的鎖頭 → 通知 → 允許，再回來按重試。', '', 'bad', '重試');
-      }
-      return;
-    }
+if (Notification.permission === 'denied') {
+/* 擋掉了還是要講一聲，不然他會以為程式壞了 */
+var ld = Number(localStorage.getItem('FAM_PUSH_LATER') || 0);
+if (!ld || Date.now() - ld > PUSH_LATER_DAYS * 86400000) {
+npcShow('通知被瀏覽器擋住了',
+'網址列左邊的鎖頭 → 通知 → 允許，再回來按重試。', '', 'bad', '重試');
+}
+return;
+}
 
-    navigator.serviceWorker.ready.then(function(reg){
-      return reg.pushManager.getSubscription().then(function(sub){
-        /* 已經訂過 → 續約一次。換手機、重裝、換 token 之後表上那列可能是舊的。
-           🔴 失敗要講出來 —— 這正是之前默默壞掉的地方。
-           ⚠️ 但「一失敗就跳紅卡片」也不對：後端那一列本來就已經存在了，
-              這一趟只是續約，Google 慢一次就嚇他一次。
-              所以第一次失敗先默默等 20 秒再試一次，兩次都不行才跳。 */
-        if (sub) return renew(sub, 0);
-        if (Notification.permission === 'granted') return famPush(false);
+navigator.serviceWorker.ready.then(function(reg){
+return reg.pushManager.getSubscription().then(function(sub){
+/* 已經訂過 → 續約一次。換手機、重裝、換 token 之後表上那列可能是舊的。
+          🔴 失敗要講出來 —— 這正是之前默默壞掉的地方。
+          ⚠️ 但「一失敗就跳紅卡片」也不對：後端那一列本來就已經存在了，
+             這一趟只是續約，Google 慢一次就嚇他一次。
+             所以第一次失敗先默默等 20 秒再試一次，兩次都不行才跳。 */
+if (sub) return renew(sub, 0);
+if (Notification.permission === 'granted') return famPush(false);
 
-        var la = Number(localStorage.getItem('FAM_PUSH_LATER') || 0);
-        if (la && Date.now() - la < PUSH_LATER_DAYS * 86400000) return;
-        npc.style.display = 'block';
-      });
-    }).catch(function(err){ npcFail('準備 Service Worker', err); });
-  } catch(e){}
+var la = Number(localStorage.getItem('FAM_PUSH_LATER') || 0);
+if (la && Date.now() - la < PUSH_LATER_DAYS * 86400000) return;
+npc.style.display = 'block';
+});
+}).catch(function(err){ npcFail('準備 Service Worker', err); });
+} catch(e){}
 }
 
 if (APP.indexOf('你的部署ID') >= 0) {
-  st.textContent = '⚠️ index.html 裡的 APP 網址還沒填';
-  bar.style.display = 'none';
+st.textContent = '⚠️ index.html 裡的 APP 網址還沒填';
+bar.style.display = 'none';
 } else if (!navigator.onLine) {
-  st.textContent = '目前離線，連上網路再試';
-  bar.style.display = 'none';
-  go.style.display  = 'block';
+st.textContent = '目前離線，連上網路再試';
+bar.style.display = 'none';
+go.style.display  = 'block';
 } else if (!localStorage.getItem('FAM_TK')) {
-  askPin();
+askPin();
 } else {
-  load();
+load();
 }
-</script>
-<!-- ═══════════════════════════════════════════════
-     🔧 暫時的量尺（外殼側）—— 量完就刪
-     開 APP 就會看到，5 秒後自己淡掉，點它可以再叫出來
-     ═══════════════════════════════════════════════ -->
-<script>
-(function(){
-  var box = document.createElement('div');
-  box.style.cssText =
-    'position:fixed;left:8px;top:8px;z-index:99999;' +
-    'max-width:calc(100vw - 16px);' +
-    'background:rgba(8,11,18,.94);color:#F3DFA3;' +
-    'font:11px/1.5 ui-monospace,Menlo,monospace;' +
-    'padding:9px 11px;border-radius:10px;white-space:pre;' +
-    'border:1px solid #2A3450;transition:opacity .4s';
-  document.documentElement.appendChild(box);
-
-  function envPx(side){
-    try{
-      var p = document.createElement('div');
-      p.style.cssText='position:fixed;left:0;top:0;width:0;visibility:hidden;'+
-        'pointer-events:none;height:env(safe-area-inset-'+side+',0px)';
-      document.documentElement.appendChild(p);
-      var h=p.getBoundingClientRect().height||0;
-      p.parentNode.removeChild(p);
-      return Math.round(h);
-    }catch(e){ return -1; }
-  }
-  function unitPx(u){
-    try{
-      var p = document.createElement('div');
-      p.style.cssText='position:fixed;left:0;top:0;width:0;visibility:hidden;'+
-        'pointer-events:none;height:'+u;
-      document.documentElement.appendChild(p);
-      var h=p.getBoundingClientRect().height||0;
-      p.parentNode.removeChild(p);
-      return Math.round(h);
-    }catch(e){ return -1; }
-  }
-  function pad(s){ return (s+'              ').slice(0,14); }
-
-  function draw(){
-    var f = document.getElementById('frame');
-    var r = f ? f.getBoundingClientRect() : {top:0,bottom:0,height:0};
-    var vv = window.visualViewport;
-    box.textContent = [
-      pad('螢幕 height')  + screen.height,
-      pad('螢幕 avail')   + screen.availHeight,
-      pad('innerHeight')  + window.innerHeight,
-      pad('clientHeight') + document.documentElement.clientHeight,
-      pad('visualVP')     + (vv?Math.round(vv.height):'-'),
-      '',
-      pad('100vh')        + unitPx('100vh'),
-      pad('100dvh')       + unitPx('100dvh'),
-      pad('100lvh')       + unitPx('100lvh'),
-      pad('100svh')       + unitPx('100svh'),
-      '',
-      pad('safe top')     + envPx('top'),
-      pad('safe bottom')  + envPx('bottom'),
-      '',
-      pad('frame top')    + Math.round(r.top),
-      pad('frame bottom') + Math.round(r.bottom),
-      pad('frame 高')     + Math.round(r.height),
-      '',
-      pad('standalone')   + (window.navigator.standalone === true),
-      pad('dpr')          + window.devicePixelRatio
-    ].join('\n');
-  }
-  draw();
-  var t = setInterval(draw, 500);
-  setTimeout(function(){ box.style.opacity='0'; }, 5000);
-  box.addEventListener('click', function(){
-    box.style.opacity = (box.style.opacity === '0') ? '1' : '0';
-  });
-  window.addEventListener('resize', draw);
-  if (window.visualViewport) window.visualViewport.addEventListener('resize', draw);
-})();
 </script>
 </body>
 </html>
