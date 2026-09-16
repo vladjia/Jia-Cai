@@ -447,6 +447,22 @@ var go    = document.getElementById('go');
 var bar   = document.querySelector('.bar');
 var watchdog = null;
 
+/* 🔴 2026-09-16　iframe 高度不靠 CSS，用量到的數字直接釘。
+   iframe 是 replaced element，height 那行只要沒生效就會縮回
+   先天高度 150px，底下整片變成外殼底色 —— 量尺上的「frame 高 154」就是它。
+   innerHeight 是瀏覽器當下真正給的可視高度，最準；
+   旋轉、切回前景、鍵盤收合都會重算。 */
+function fitFrame(){
+  try { frame.style.height = window.innerHeight + 'px'; } catch(e){}
+}
+fitFrame();
+setTimeout(fitFrame, 300);
+setTimeout(fitFrame, 1200);
+window.addEventListener('resize', fitFrame);
+window.addEventListener('orientationchange', function(){ setTimeout(fitFrame, 120); });
+document.addEventListener('visibilitychange', fitFrame);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fitFrame);
+
 function load(){
 revealed = false;
 clearTimeout(revealTimer);
